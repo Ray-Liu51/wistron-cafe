@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>☕ 上班趣 Coffee ERP</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="module" id="firebase-init">
+  // ── Firebase SDK ──
+  import { initializeApp }         from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue, update, push, remove }
+                                   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyCZt9JuKQyrg_7jKXg1ZIqpzUW3Xv-OcY0",
+    authDomain:        "wistron-387cafe.firebaseapp.com",
+    projectId:         "wistron-387cafe",
+    storageBucket:     "wistron-387cafe.firebasestorage.app",
+    messagingSenderId: "439644363376",
+    appId:             "1:439644363376:web:64839e8c3a0ec9d0fab2b5",
+    databaseURL: "https://wistron-387cafe-default-rtdb.asia-southeast1.firebasedatabase.app",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
+  // 掛到 window 讓 Babel script 使用
+  window._fb = { db, ref, set, onValue, update, push, remove };
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body,#root{min-height:100vh;font-family:'Noto Serif TC',serif;background:#1a0f07;color:#f5ead8}
+input,select,textarea{font-family:'Noto Serif TC',serif}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:rgba(255,255,255,.04)}::-webkit-scrollbar-thumb{background:rgba(196,122,43,.4);border-radius:3px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes loginIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+@keyframes overlayIn{from{opacity:0}to{opacity:1}}
+.fadeUp{animation:fadeUp .45s cubic-bezier(.16,1,.3,1)}
+.loginIn{animation:loginIn .7s cubic-bezier(.16,1,.3,1)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ── 預設資料（第一次啟動時寫入 Firebase）──
+const DEFAULT_ITEMS = [
+  { id:"i1", name:"咖啡豆", unit:"包", price:280, stock:100, warn:20 },
+  { id:"i2", name:"牛奶球", unit:"顆", price:3,   stock:5000,warn:500 },
+  { id:"i3", name:"糖包",   unit:"包", price:1,   stock:800, warn:100 },
+  { id:"i4", name:"攪拌棒", unit:"支", price:2,   stock:300, warn:50  },
+  { id:"i5", name:"紙杯",   unit:"個", price:1.5, stock:600, warn:100 },
+];
+const DEFAULT_USERS = [
+  { id:"u1", name:"ray",   pass:"admin123", role:"Super" },
+  { id:"u2", name:"jason", pass:"jason123", role:"Admin" },
+  { id:"u3", name:"user1", pass:"pass123",  role:"User"  },
+];
+const MACHINES = ["WIS-B1-001","WIS-1F-002","WIS-2F-003","WIS-3F-004"];
+
+// ── 顏色 ──
+const C={espresso:"#1a0f07",roast:"#3b1f0e",caramel:"#c47a2b",cream:"#f5ead8",gold:"#e8a94a",muted:"#8a7260",danger:"#c0392b",safe:"#27ae60",warn:"#e67e22"};
+const mono={fontFamily:"'DM Mono',monospace"};
+const serif={fontFamily:"'Playfair Display',serif"};
+
+// ── 小元件 ──
+function Tag({label,type}){
+  const cfg={safe:{bg:"rgba(39,174,96,.15)",color:"#2ecc71",border:"rgba(39,174,96,.3)"},warn:{bg:"rgba(230,126,34,.15)",color:"#e67e22",border:"rgba(230,126,34,.3)"},danger:{bg:"rgba(192,57,43,.15)",color:"#e74c3c",border:"rgba(192,57,43,.3)"}}[type]||{bg:"rgba(255,255,255,.08)",color:"#f5ead8",border:"rgba(255,255,255,.15)"};
+  return <span style={{display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:".68rem",...mono,background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`}}>{label}</span>;
+}
+function StockBar({pct}){
+  const color=pct>40?`linear-gradient(90deg,${C.safe},#2ecc71)`:pct>20?`linear-gradient(90deg,${C.warn},#f39c12)`:`linear-gradient(90deg,${C.danger},#e74c3c)`;
+  return <div style={{flex:1,height:5,background:"rgba(255,255,255,.08)",borderRadius:3,overflow:"hidden",minWidth:60}}><div style={{width:`${pct}%`,height:"100%",background:color,borderRadius:3,transition:"width .5s"}}/></div>;
+}
+function Card({title,hint,children,style}){
+  return <div style={{background:"linear-gradient(145deg,rgba(59,31,14,.65),rgba(26,15,7,.5))",border:"1px solid rgba(196,122,43,.18)",borderRadius:16,overflow:"hidden",marginBottom:22,...style}}>
+    {(title||hint)&&<div style={{padding:"16px 22px 13px",borderBottom:"1px solid rgba(196,122,43,.1)",display:"flex",alignItems:"center",justifyContent:"space-between"}}><span style={{fontSize:".93rem",fontWeight:600,color:C.cream}}>{title}</span><span style={{fontSize:".7rem",color:C.muted,...mono}}>{hint}</span></div>}
+    {children}
+  </div>;
+}
+function QInput({value,onChange,placeholder,type="text",style}){
+  return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={{width:"100%",background:"rgba(255,255,255,.06)",border:"1px solid rgba(196,122,43,.22)",borderRadius:9,padding:"10px 14px",color:C.cream,fontSize:".9rem",outline:"none",...mono,...style}}/>;
+}
+function Btn({onClick,children,color="caramel",style}){
+  const bg={caramel:`linear-gradient(135deg,${C.caramel},${C.gold})`,green:"linear-gradient(135deg,#27ae60,#2ecc71)",red:`linear-gradient(135deg,${C.danger},#e74c3c)`,ghost:"rgba(255,255,255,.06)"}[color];
+  const tc=color==="ghost"?C.cream:color==="caramel"?C.espresso:"#fff";
+  return <button onClick={onClick} style={{padding:"10px 22px",background:bg,border:color==="ghost"?"1px solid rgba(255,255,255,.14)":"none",borderRadius:9,color:tc,fontWeight:700,fontSize:".87rem",cursor:"pointer",fontFamily:"'Noto Serif TC',serif",...style}}>{children}</button>;
+}
+function SmBtn({onClick,children,color="edit"}){
+  const cfg={edit:{bg:"rgba(196,122,43,.1)",border:"rgba(196,122,43,.4)",color:C.gold},rst:{bg:"rgba(39,174,96,.1)",border:"rgba(39,174,96,.4)",color:"#2ecc71"},del:{bg:"rgba(192,57,43,.1)",border:"rgba(192,57,43,.4)",color:"#e74c3c"}}[color];
+  return <button onClick={onClick} style={{padding:"5px 12px",background:cfg.bg,border:`1px solid ${cfg.border}`,borderRadius:6,color:cfg.color,fontSize:".72rem",cursor:"pointer",...mono}}>{children}</button>;
+}
+function Toast({msg}){
+  return <div style={{position:"fixed",bottom:28,right:28,zIndex:300,background:C.roast,border:`1px solid ${C.caramel}`,borderRadius:12,padding:"13px 20px",color:C.cream,fontSize:".88rem",boxShadow:"0 8px 32px rgba(0,0,0,.5)",maxWidth:320,opacity:msg?1:0,transform:msg?"translateY(0)":"translateY(16px)",transition:"all .3s",pointerEvents:"none"}}>{msg}</div>;
+}
+function Modal({title,body,onOk,onClose}){
+  if(!title)return null;
+  return <div onClick={e=>{if(e.target===e.currentTarget)onClose();}} style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,.72)",backdropFilter:"blur(5px)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <div style={{background:`linear-gradient(145deg,${C.roast},#1e0e06)`,border:"1px solid rgba(196,122,43,.35)",borderRadius:16,padding:30,width:"min(480px,92vw)",boxShadow:"0 24px 60px rgba(0,0,0,.65)"}}>
+      <div style={{...serif,fontSize:"1.2rem",color:C.gold,marginBottom:14}}>{title}</div>
+      <div style={{color:C.muted,fontSize:".87rem",lineHeight:1.7,marginBottom:18}}>{body}</div>
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <button onClick={onClose} style={{padding:"9px 18px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,color:C.muted,cursor:"pointer",...mono,fontSize:".8rem"}}>取消</button>
+        <button onClick={onOk} style={{padding:"9px 18px",background:`linear-gradient(135deg,${C.caramel},${C.gold})`,border:"none",borderRadius:8,color:C.espresso,fontWeight:700,cursor:"pointer",...mono,fontSize:".8rem"}}>確認</button>
+      </div>
+    </div>
+  </div>;
+}
+
+// ══════════════════════════════════════════
+// MAIN APP
+// ══════════════════════════════════════════
+function App(){
+  const [ready,  setReady]  = useState(false);   // Firebase 資料已載入
+  const [screen, setScreen] = useState("login");
+  const [page,   setPage]   = useState("supply");
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Firebase 即時資料
+  const [items,   setItems]   = useState([]);
+  const [users,   setUsers]   = useState([]);
+  const [records, setRecords] = useState([]);
+
+  const [toast, setToast] = useState("");
+  const [modal, setModal] = useState(null);
+
+  // 表單 state
+  const [loginUser,setLoginUser]=useState("");const [loginPass,setLoginPass]=useState("");const [loginFloor,setLoginFloor]=useState("B1F");const [loginErr,setLoginErr]=useState("");
+  const [reqQtys,setReqQtys]=useState({});const [reqMach,setReqMach]=useState(MACHINES[0]);const [reqNote,setReqNote]=useState("正常");
+  const [iName,setIName]=useState("");const [iUnit,setIUnit]=useState("");const [iPrice,setIPrice]=useState("");const [iWarn,setIWarn]=useState("");const [iStock,setIStock]=useState("");
+  const [uName,setUName]=useState("");const [uPass,setUPass]=useState("");const [uRole,setURole]=useState("User");
+  const [rstItemId,setRstItemId]=useState("");const [rstQty,setRstQty]=useState("");
+  const [fFloor,setFFloor]=useState("");const [fItem,setFItem]=useState("");
+
+  const showToast=useCallback((msg,dur=2800)=>{setToast(msg);setTimeout(()=>setToast(""),dur);},[]);
+  const { db, ref, set, onValue, update, push, remove } = window._fb;
+
+  // ── 初始化：監聽 Firebase 資料 ──
+  useEffect(()=>{
+    // 監聽 items
+    onValue(ref(db,"items"),(snap)=>{
+      const val=snap.val();
+      if(val){ setItems(Object.values(val)); }
+      else {
+        // 第一次：寫入預設資料
+        const obj={};
+        DEFAULT_ITEMS.forEach(i=>{ obj[i.id]=i; });
+        set(ref(db,"items"),obj);
+      }
+    });
+    // 監聽 users
+    onValue(ref(db,"users"),(snap)=>{
+      const val=snap.val();
+      if(val){ setUsers(Object.values(val)); }
+      else {
+        const obj={};
+        DEFAULT_USERS.forEach(u=>{ obj[u.id]=u; });
+        set(ref(db,"users"),obj);
+      }
+      setReady(true);
+    });
+    // 監聽 records（最新100筆）
+    onValue(ref(db,"records"),(snap)=>{
+      const val=snap.val();
+      if(val){
+        const arr=Object.entries(val).map(([k,v])=>({...v,fbKey:k}));
+        arr.sort((a,b)=>new Date(b.time)-new Date(a.time));
+        setRecords(arr.slice(0,200));
+      } else { setRecords([]); }
+    });
+  },[]);
+
+  // ── Firebase 寫入 helpers ──
+  const fbSetItem  = (item)  => set(ref(db,`items/${item.id}`), item);
+  const fbDelItem  = (id)    => remove(ref(db,`items/${id}`));
+  const fbSetUser  = (user)  => set(ref(db,`users/${user.id}`), user);
+  const fbDelUser  = (id)    => remove(ref(db,`users/${id}`));
+  const fbAddRecord= (rec)   => push(ref(db,"records"), rec);
+
+  // ── 登入 ──
+  const doLogin=()=>{
+    const user=users.find(u=>u.name.trim()===loginUser.trim()&&u.pass===loginPass);
+    if(!user){setLoginErr("帳號或密碼錯誤");return;}
+    setLoginErr("");setCurrentUser({...user,floor:loginFloor});setPage("supply");setScreen("app");
+    showToast(`歡迎，${user.name}！`);
+  };
+  const confirmLogout=()=>{setCurrentUser(null);setScreen("login");setLoginUser("");setLoginPass("");};
+
+  // ── 領用 ──
+  const submitReq=async()=>{
+    let any=false,errs=[];
+    const updates={};
+    items.forEach(item=>{
+      const qty=parseInt(reqQtys[item.id])||0;
+      if(qty<=0)return;
+      if(qty>item.stock){errs.push(`${item.name} 庫存不足（現有 ${item.stock}）`);return;}
+      any=true;
+      updates[item.id]={...item,stock:item.stock-qty};
+    });
+    if(errs.length){showToast("⚠️ "+errs.join(" / "),4000);return;}
+    if(!any){showToast("請輸入至少一項數量");return;}
+    // 寫入庫存
+    for(const item of Object.values(updates)) await fbSetItem(item);
+    // 寫入紀錄
+    for(const item of items){
+      const qty=parseInt(reqQtys[item.id])||0;
+      if(qty<=0)continue;
+      await fbAddRecord({time:new Date().toLocaleString("zh-TW"),machine:reqMach,floor:reqMach.split("-")[1],item:item.name,qty,user:currentUser.name,note:reqNote});
+    }
+    setReqQtys({});setReqNote("正常");
+    showToast("✅ 領用成功！庫存已更新");
+    const low=items.filter(i=>updates[i.id]&&updates[i.id].stock<=i.warn);
+    if(low.length)setTimeout(()=>showToast(`🔔 警示：${low.map(i=>i.name).join("、")} 庫存偏低！`,5000),2000);
+  };
+
+  // ── 物料管理 ──
+  const addItem=async()=>{
+    if(!iName||!iUnit){showToast("請填寫名稱與單位");return;}
+    const id="i"+Date.now();
+    await fbSetItem({id,name:iName,unit:iUnit,price:parseFloat(iPrice)||0,stock:parseInt(iStock)||0,warn:parseInt(iWarn)||20});
+    setIName("");setIUnit("");setIPrice("");setIWarn("");setIStock("");showToast("✅ 物料已新增");
+  };
+  const editItem=(it)=>{
+    setIName(it.name);setIUnit(it.unit);setIPrice(String(it.price));setIWarn(String(it.warn));setIStock(String(it.stock));
+    setModal({title:`編輯：${it.name}`,body:"確認以目前欄位內容更新此物料？",onOk:async()=>{
+      await fbSetItem({...it,name:iName||it.name,unit:iUnit||it.unit,price:parseFloat(iPrice)||it.price,warn:parseInt(iWarn)||it.warn,stock:parseInt(iStock)||it.stock});
+      setIName("");setIUnit("");setIPrice("");setIWarn("");setIStock("");showToast("✅ 物料已更新");
+    }});
+  };
+  const delItem=(it)=>setModal({title:"刪除物料",body:`確定刪除「${it.name}」？`,onOk:async()=>{await fbDelItem(it.id);showToast("🗑️ 已刪除");}});
+  const quickRst=(it)=>{
+    let q=0;
+    setModal({title:`快速補庫：${it.name}`,body:<div><div style={{marginBottom:10}}>現有：<strong style={{color:C.gold}}>{it.stock} {it.unit}</strong></div><input type="number" defaultValue="" onChange={e=>q=parseInt(e.target.value)||0} placeholder="50" style={{width:"100%",background:"rgba(255,255,255,.06)",border:"1px solid rgba(196,122,43,.25)",borderRadius:9,padding:"10px 14px",color:C.cream,...mono,outline:"none"}}/></div>,
+      onOk:async()=>{if(q<=0){showToast("請輸入有效數量");return;}await fbSetItem({...it,stock:it.stock+q});showToast(`✅ 補庫 ${q} ${it.unit} 成功`);}});
+  };
+  const doRestock=async()=>{
+    const q=parseInt(rstQty)||0,it=items.find(i=>i.id===rstItemId);
+    if(!it||q<=0){showToast("請選擇物料並輸入數量");return;}
+    await fbSetItem({...it,stock:it.stock+q});setRstQty("");showToast(`✅ ${it.name} 補庫 ${q} ${it.unit} 完成`);
+  };
+
+  // ── 帳號管理 ──
+  const addUser=async()=>{
+    if(currentUser?.role!=="Super"){showToast("僅 Super Admin 可新增帳號");return;}
+    const tn=uName.trim(),tp=uPass.trim();
+    if(!tn||!tp){showToast("請填寫帳號與密碼");return;}
+    if(users.find(u=>u.name===tn)){showToast("帳號已存在");return;}
+    const id="u"+Date.now();
+    await fbSetUser({id,name:tn,pass:tp,role:uRole});
+    setUName("");setUPass("");showToast("✅ 帳號已建立");
+  };
+  const delUser=(u)=>{
+    if(currentUser?.role!=="Super"){showToast("僅 Super Admin 可刪除");return;}
+    if(u.role==="Super"){showToast("無法刪除最高管理者");return;}
+    setModal({title:"刪除帳號",body:`確定刪除帳號「${u.name}」？`,onOk:async()=>{await fbDelUser(u.id);showToast("🗑️ 帳號已刪除");}});
+  };
+
+  const monthlyCost=()=>{const n=new Date();return records.filter(r=>{const d=new Date(r.time);return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}).reduce((a,r)=>{const i=items.find(x=>x.name===r.item);return a+(i?i.price*r.qty:0);},0).toFixed(0);};
+  const isAdmin=currentUser?.role==="Super"||currentUser?.role==="Admin";
+  const lowCount=items.filter(i=>i.stock<=i.warn).length;
+  const todayRecs=records.filter(r=>{const d=new Date(r.time),n=new Date();return d.getDate()===n.getDate()&&d.getMonth()===n.getMonth();});
+  const filteredRecs=records.filter(r=>(!fFloor||r.floor===fFloor)&&(!fItem||r.item===fItem));
+
+  // ── 載入中 ──
+  if(!ready) return (
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:C.espresso,gap:20}}>
+      <div style={{...serif,fontSize:"2rem",color:C.gold}}>☕ 上班趣 Coffee</div>
+      <div style={{color:C.muted,...mono,fontSize:".85rem",animation:"blink 1s infinite"}}>連線 Firebase 中...</div>
+    </div>
+  );
+
+  // ── 登入畫面 ──
+  if(screen==="login") return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.espresso}}>
+      <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 60% at 20% 10%,rgba(196,122,43,.18) 0%,transparent 60%)",pointerEvents:"none"}}/>
+      <div className="loginIn" style={{background:`linear-gradient(145deg,${C.roast},#2a1508)`,border:"1px solid rgba(196,122,43,.38)",borderRadius:22,padding:"52px 44px",width:"min(420px,93vw)",boxShadow:"0 32px 80px rgba(0,0,0,.65)",zIndex:1}}>
+        <div style={{...serif,fontSize:"2.1rem",fontWeight:900,color:C.gold,textAlign:"center"}}>☕ 上班趣 Coffee</div>
+        <div style={{textAlign:"center",color:C.muted,fontSize:".75rem",margin:"6px 0 32px",...mono}}>WISTRON ERP · COFFEE INVENTORY</div>
+        {[["帳號",loginUser,setLoginUser,"text","輸入帳號"],["密碼",loginPass,setLoginPass,"password","輸入密碼"]].map(([l,v,s,t,ph])=>(
+          <div key={l} style={{marginBottom:17}}>
+            <div style={{fontSize:".7rem",...mono,color:C.muted,marginBottom:7,letterSpacing:".1em"}}>{l}</div>
+            <input type={t} value={v} onChange={e=>s(e.target.value)} placeholder={ph} onKeyDown={e=>e.key==="Enter"&&doLogin()}
+              style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:10,padding:"12px 16px",color:C.cream,fontSize:".95rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}}/>
+          </div>
+        ))}
+        <div style={{marginBottom:22}}>
+          <div style={{fontSize:".7rem",...mono,color:C.muted,marginBottom:7,letterSpacing:".1em"}}>所在樓層</div>
+          <select value={loginFloor} onChange={e=>setLoginFloor(e.target.value)} style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:10,padding:"12px 16px",color:C.cream,fontSize:".93rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}}>
+            {["B1F","1F","2F","3F"].map(f=><option key={f} style={{background:C.roast}}>{f}</option>)}
+          </select>
+        </div>
+        <button onClick={doLogin} style={{width:"100%",padding:14,background:`linear-gradient(135deg,${C.caramel},${C.gold})`,border:"none",borderRadius:10,color:C.espresso,fontWeight:700,fontSize:"1rem",cursor:"pointer",fontFamily:"'Noto Serif TC',serif",boxShadow:"0 4px 20px rgba(196,122,43,.35)"}}>
+          登入系統
+        </button>
+        {loginErr&&<div style={{color:"#e74c3c",fontSize:".8rem",textAlign:"center",marginTop:10,...mono}}>{loginErr}</div>}
+        <div style={{textAlign:"center",marginTop:20,color:C.muted,fontSize:".72rem",...mono}}>
+          ⚡ 即時雲端同步版 · Firebase
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── 登出確認 ──
+  if(screen==="logout") return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.espresso}}>
+      <div className="loginIn" style={{background:`linear-gradient(145deg,${C.roast},#1e0e06)`,border:"1px solid rgba(196,122,43,.35)",borderRadius:22,padding:"52px 44px",width:"min(400px,92vw)",textAlign:"center",boxShadow:"0 32px 80px rgba(0,0,0,.7)"}}>
+        <div style={{fontSize:"3.2rem",marginBottom:18}}>🚪</div>
+        <div style={{...serif,fontSize:"1.6rem",color:C.cream,marginBottom:20}}>確認登出？</div>
+        <div style={{display:"flex",gap:12}}>
+          <button onClick={()=>setScreen("app")} style={{flex:1,padding:13,background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.14)",borderRadius:11,color:C.cream,cursor:"pointer",fontSize:".9rem",fontFamily:"'Noto Serif TC',serif",fontWeight:600}}>取消</button>
+          <button onClick={confirmLogout} style={{flex:1,padding:13,background:"linear-gradient(135deg,#c0392b,#e74c3c)",border:"none",borderRadius:11,color:"#fff",cursor:"pointer",fontSize:".9rem",fontFamily:"'Noto Serif TC',serif",fontWeight:700}}>確認登出</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── 主畫面 ──
+  return (
+    <>
+      <nav style={{position:"sticky",top:0,zIndex:50,background:"rgba(26,15,7,.93)",backdropFilter:"blur(18px)",borderBottom:"1px solid rgba(196,122,43,.2)",display:"flex",alignItems:"center",padding:"0 24px",height:62,gap:4,flexWrap:"nowrap"}}>
+        <div style={{...serif,fontWeight:900,fontSize:"1.15rem",color:C.gold,marginRight:"auto",whiteSpace:"nowrap"}}>
+          ☕ 上班趣 Coffee
+          <span style={{color:C.muted,fontWeight:400,fontSize:".68rem",...mono,marginLeft:8}}>⚡ 即時同步</span>
+        </div>
+        <div style={{display:"flex",gap:2,flexShrink:0}}>
+          {[{id:"supply",label:"📦 物料供應",always:true},{id:"records",label:"📋 領用紀錄",always:true},{id:"admin",label:"⚙️ 後台管理",always:false},{id:"analytics",label:"📊 成本分析",always:false}].filter(t=>t.always||isAdmin).map(t=>(
+            <div key={t.id} onClick={()=>setPage(t.id)} style={{padding:"7px 15px",borderRadius:8,cursor:"pointer",fontSize:".78rem",color:page===t.id?C.gold:C.muted,background:page===t.id?"rgba(196,122,43,.12)":"transparent",border:page===t.id?"1px solid rgba(196,122,43,.3)":"1px solid transparent",...mono,whiteSpace:"nowrap"}}>{t.label}</div>
+          ))}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginLeft:16,flexShrink:0}}>
+          <span style={{fontSize:".78rem",...mono,color:C.muted}}>{currentUser?.name}</span>
+          <Tag label={currentUser?.role} type={currentUser?.role==="Super"?"danger":currentUser?.role==="Admin"?"warn":"safe"}/>
+          <button onClick={()=>setScreen("logout")} style={{background:"none",border:"1px solid rgba(255,255,255,.12)",color:C.muted,padding:"6px 12px",borderRadius:7,cursor:"pointer",fontSize:".75rem",...mono}}>登出</button>
+        </div>
+      </nav>
+
+      <div style={{padding:"32px 24px",maxWidth:1200,margin:"0 auto"}} className="fadeUp">
+
+        {/* ── 物料供應 ── */}
+        {page==="supply"&&<>
+          <div style={{...serif,fontSize:"1.85rem",color:C.gold,marginBottom:5}}>物料供應台</div>
+          <div style={{color:C.muted,fontSize:".8rem",marginBottom:28,...mono}}>MATERIAL SUPPLY · 即時雲端庫存</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14,marginBottom:26}}>
+            {[{icon:"📦",label:"低庫存警示",val:lowCount,unit:"項需補貨",accent:lowCount>0?"#e74c3c":C.safe},{icon:"✅",label:"庫存正常",val:items.length-lowCount,unit:"項充足",accent:C.safe},{icon:"📋",label:"今日領用",val:todayRecs.length,unit:"筆紀錄",accent:C.cream},{icon:"💰",label:"本月成本",val:monthlyCost(),unit:"元",accent:C.cream}].map(s=>(
+              <div key={s.label} style={{background:"linear-gradient(145deg,rgba(59,31,14,.8),rgba(26,15,7,.6))",border:"1px solid rgba(196,122,43,.2)",borderRadius:14,padding:"18px 18px 14px",position:"relative"}}>
+                <div style={{position:"absolute",right:14,top:12,fontSize:"1.4rem",opacity:.3}}>{s.icon}</div>
+                <div style={{fontSize:".68rem",color:C.muted,...mono}}>{s.label}</div>
+                <div style={{...serif,fontSize:"1.9rem",fontWeight:700,color:s.accent,margin:"4px 0 2px"}}>{s.val}</div>
+                <div style={{fontSize:".68rem",color:C.muted}}>{s.unit}</div>
+              </div>
+            ))}
+          </div>
+          <Card title="📦 現有庫存" hint="Firebase 即時同步">
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead><tr>{["物料","庫存","狀態","警戒水位","單價"].map(h=><th key={h} style={{padding:"11px 18px",textAlign:"left",fontSize:".68rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...mono}}>{h}</th>)}</tr></thead>
+              <tbody>{items.map(item=>{const pct=Math.min(100,Math.round(item.stock/(item.warn*5)*100));return(
+                <tr key={item.id} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
+                  <td style={{padding:"13px 18px",fontWeight:600}}>{item.name}</td>
+                  <td style={{padding:"13px 18px"}}><div style={{display:"flex",alignItems:"center",gap:8}}><strong style={{...mono}}>{item.stock.toLocaleString()}</strong><span style={{fontSize:".72rem",color:C.muted,...mono}}>{item.unit}</span><StockBar pct={pct}/></div></td>
+                  <td style={{padding:"13px 18px"}}><Tag label={pct>40?"充足":pct>20?"注意":"補貨"} type={pct>40?"safe":pct>20?"warn":"danger"}/></td>
+                  <td style={{padding:"13px 18px",fontSize:".8rem",color:C.muted,...mono}}>{item.warn} {item.unit}</td>
+                  <td style={{padding:"13px 18px",color:C.gold,...mono}}>${item.price}</td>
+                </tr>
+              );})}</tbody>
+            </table>
+          </Card>
+          <Card title="☕ 領用申請">
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:16,padding:22}}>
+              {items.map(item=>(
+                <div key={item.id}>
+                  <div style={{fontSize:".72rem",color:C.muted,...mono,marginBottom:6}}>📦 {item.name} ({item.unit}) 庫存:{item.stock.toLocaleString()}</div>
+                  <input type="number" min="0" value={reqQtys[item.id]||""} onChange={e=>setReqQtys(p=>({...p,[item.id]:e.target.value}))} placeholder="0"
+                    style={{width:"100%",background:"rgba(255,255,255,.06)",border:"1px solid rgba(196,122,43,.22)",borderRadius:9,padding:"10px 14px",color:C.cream,fontSize:".95rem",outline:"none",...mono}}/>
+                </div>
+              ))}
+            </div>
+            <div style={{padding:"14px 22px",display:"flex",alignItems:"center",gap:12,borderTop:"1px solid rgba(196,122,43,.1)",flexWrap:"wrap"}}>
+              <span style={{fontSize:".76rem",color:C.muted,...mono}}>機台：</span>
+              <select value={reqMach} onChange={e=>setReqMach(e.target.value)} style={{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"8px 13px",color:C.cream,...mono,fontSize:".82rem",outline:"none"}}>
+                {MACHINES.map(m=><option key={m} style={{background:C.roast}}>{m}</option>)}
+              </select>
+              <span style={{fontSize:".76rem",color:C.muted,...mono}}>狀況：</span>
+              <select value={reqNote} onChange={e=>setReqNote(e.target.value)} style={{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"8px 13px",color:C.cream,...mono,fontSize:".82rem",outline:"none"}}>
+                <option value="正常" style={{background:C.roast}}>✅ 正常</option>
+                <option value="待修" style={{background:C.roast}}>🔧 待修</option>
+                <option value="保養中" style={{background:C.roast}}>🛠️ 保養中</option>
+              </select>
+              <Btn onClick={submitReq}>✓ 確認領用</Btn>
+            </div>
+          </Card>
+        </>}
+
+        {/* ── 領用紀錄 ── */}
+        {page==="records"&&<>
+          <div style={{...serif,fontSize:"1.85rem",color:C.gold,marginBottom:5}}>領用紀錄</div>
+          <div style={{color:C.muted,fontSize:".8rem",marginBottom:28,...mono}}>USAGE RECORDS · 雲端即時</div>
+          <Card>
+            <div style={{padding:"13px 22px",display:"flex",gap:10,flexWrap:"wrap",borderBottom:"1px solid rgba(196,122,43,.08)"}}>
+              {[["fFloor",fFloor,setFFloor,["","B1F","1F","2F","3F"],["全部樓層","B1F","1F","2F","3F"]],["fItem",fItem,setFItem,["",...items.map(i=>i.name)],["全部物料",...items.map(i=>i.name)]]].map(([key,val,set,vals,labels])=>(
+                <select key={key} value={val} onChange={e=>set(e.target.value)} style={{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.2)",borderRadius:8,padding:"8px 13px",color:C.cream,...mono,fontSize:".8rem",outline:"none"}}>
+                  {vals.map((v,i)=><option key={v} value={v} style={{background:C.roast}}>{labels[i]}</option>)}
+                </select>
+              ))}
+            </div>
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead><tr>{["時間","機台","物料","數量","操作者","備註"].map(h=><th key={h} style={{padding:"10px 18px",textAlign:"left",fontSize:".68rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...mono}}>{h}</th>)}</tr></thead>
+              <tbody>
+                {filteredRecs.slice(0,100).map((r,i)=>(
+                  <tr key={r.fbKey||i} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
+                    <td style={{padding:"12px 18px",fontSize:".74rem",color:C.muted,...mono}}>{r.time}</td>
+                    <td style={{padding:"12px 18px"}}><span style={{background:"rgba(196,122,43,.1)",border:"1px solid rgba(196,122,43,.25)",color:C.caramel,borderRadius:4,padding:"2px 7px",fontSize:".68rem",...mono}}>{r.machine}</span></td>
+                    <td style={{padding:"12px 18px",fontSize:".88rem"}}>{r.item}</td>
+                    <td style={{padding:"12px 18px",color:C.gold,...mono,fontWeight:700}}>{r.qty}</td>
+                    <td style={{padding:"12px 18px",fontSize:".82rem",color:C.muted}}>{r.user}</td>
+                    <td style={{padding:"12px 18px",fontSize:".78rem",color:C.muted}}>{r.note||"—"}</td>
+                  </tr>
+                ))}
+                {filteredRecs.length===0&&<tr><td colSpan={6} style={{textAlign:"center",color:C.muted,padding:28,...mono,fontSize:".82rem"}}>無資料</td></tr>}
+              </tbody>
+            </table>
+          </Card>
+        </>}
+
+        {/* ── 後台管理 ── */}
+        {page==="admin"&&<>
+          <div style={{...serif,fontSize:"1.85rem",color:C.gold,marginBottom:5}}>後台管理</div>
+          <div style={{color:C.muted,fontSize:".8rem",marginBottom:28,...mono}}>ADMIN PANEL</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:22}}>
+            <div>
+              <Card title="🗃️ 物料管理">
+                <div style={{padding:"18px 22px",display:"flex",flexDirection:"column",gap:12}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+                    {[["物料名稱",iName,setIName,"咖啡豆"],["單位",iUnit,setIUnit,"包/顆/支"]].map(([l,v,s,ph])=><div key={l}><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>{l}</div><QInput value={v} onChange={s} placeholder={ph}/></div>)}
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+                    {[["單價",iPrice,setIPrice,"0"],["警戒水位",iWarn,setIWarn,"20"]].map(([l,v,s,ph])=><div key={l}><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>{l}</div><QInput type="number" value={v} onChange={s} placeholder={ph}/></div>)}
+                  </div>
+                  <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>初始庫存</div><QInput type="number" value={iStock} onChange={setIStock} placeholder="100"/></div>
+                  <Btn onClick={addItem} style={{padding:"10px"}}>+ 新增物料</Btn>
+                </div>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead><tr>{["物料","庫存","單價","操作"].map(h=><th key={h} style={{padding:"9px 16px",textAlign:"left",fontSize:".66rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...mono}}>{h}</th>)}</tr></thead>
+                  <tbody>{items.map(it=>(
+                    <tr key={it.id} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
+                      <td style={{padding:"12px 16px"}}>{it.name}<br/><span style={{fontSize:".68rem",color:C.muted,...mono}}>{it.unit}·警戒{it.warn}</span></td>
+                      <td style={{padding:"12px 16px",...mono,color:it.stock<=it.warn?"#e74c3c":C.gold}}>{it.stock.toLocaleString()}</td>
+                      <td style={{padding:"12px 16px",...mono,color:C.muted}}>${it.price}</td>
+                      <td style={{padding:"12px 16px"}}><div style={{display:"flex",gap:5,flexWrap:"wrap"}}><SmBtn onClick={()=>editItem(it)} color="edit">編輯</SmBtn><SmBtn onClick={()=>quickRst(it)} color="rst">補庫</SmBtn>{isAdmin&&<SmBtn onClick={()=>delItem(it)} color="del">刪除</SmBtn>}</div></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </Card>
+            </div>
+            <div>
+              <Card title="👤 帳號管理" hint="Super Admin 專屬">
+                <div style={{padding:"18px 22px",display:"flex",flexDirection:"column",gap:12,opacity:currentUser?.role==="Super"?1:.45,pointerEvents:currentUser?.role==="Super"?"auto":"none"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+                    <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>帳號</div><QInput value={uName} onChange={setUName} placeholder="帳號"/></div>
+                    <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>密碼</div><QInput type="password" value={uPass} onChange={setUPass} placeholder="密碼"/></div>
+                  </div>
+                  <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>權限等級</div>
+                    <select value={uRole} onChange={e=>setURole(e.target.value)} style={{width:"100%",background:"rgba(255,255,255,.06)",border:"1px solid rgba(196,122,43,.22)",borderRadius:9,padding:"10px 14px",color:C.cream,...mono,fontSize:".88rem",outline:"none"}}>
+                      {["User","Admin","Super"].map(r=><option key={r} value={r} style={{background:C.roast}}>{r}</option>)}
+                    </select>
+                  </div>
+                  <Btn onClick={addUser} style={{padding:"10px"}}>+ 新增帳號</Btn>
+                </div>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead><tr>{["帳號","權限","操作"].map(h=><th key={h} style={{padding:"9px 16px",textAlign:"left",fontSize:".66rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...mono}}>{h}</th>)}</tr></thead>
+                  <tbody>{users.map(u=>(
+                    <tr key={u.id} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
+                      <td style={{padding:"12px 16px",...mono}}>{u.name}</td>
+                      <td style={{padding:"12px 16px"}}><Tag label={u.role} type={u.role==="Super"?"danger":u.role==="Admin"?"warn":"safe"}/></td>
+                      <td style={{padding:"12px 16px"}}>{currentUser?.role==="Super"?<SmBtn onClick={()=>delUser(u)} color="del">刪除</SmBtn>:<span style={{fontSize:".72rem",color:C.muted}}>—</span>}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </Card>
+              <Card title="🚚 進貨補庫" style={{marginBottom:0}}>
+                <div style={{padding:"18px 22px",display:"flex",flexDirection:"column",gap:12}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+                    <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>物料</div>
+                      <select value={rstItemId} onChange={e=>setRstItemId(e.target.value)} style={{width:"100%",background:"rgba(255,255,255,.06)",border:"1px solid rgba(196,122,43,.22)",borderRadius:9,padding:"10px 14px",color:C.cream,...mono,fontSize:".88rem",outline:"none"}}>
+                        <option value="" style={{background:C.roast}}>選擇物料</option>
+                        {items.map(i=><option key={i.id} value={i.id} style={{background:C.roast}}>{i.name}</option>)}
+                      </select>
+                    </div>
+                    <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>進貨數量</div><QInput type="number" value={rstQty} onChange={setRstQty} placeholder="50"/></div>
+                  </div>
+                  <Btn onClick={doRestock} color="green" style={{padding:"10px"}}>+ 確認進貨</Btn>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </>}
+
+        {/* ── 成本分析 ── */}
+        {page==="analytics"&&<>
+          <div style={{...serif,fontSize:"1.85rem",color:C.gold,marginBottom:5}}>成本分析</div>
+          <div style={{color:C.muted,fontSize:".8rem",marginBottom:28,...mono}}>COST ANALYTICS</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:18,marginBottom:24}}>
+            {["B1F","1F","2F","3F"].map(fl=>{
+              const recs=records.filter(r=>r.floor===fl);
+              const total=recs.reduce((a,r)=>{const i=items.find(x=>x.name===r.item);return a+(i?i.price*r.qty:0);},0);
+              return <div key={fl} style={{background:"linear-gradient(145deg,rgba(59,31,14,.7),rgba(26,15,7,.5))",border:"1px solid rgba(196,122,43,.2)",borderRadius:16,padding:22}}>
+                <div style={{...serif,fontSize:"1.25rem",color:C.gold,marginBottom:14}}>{fl}</div>
+                {items.map(item=>{const qty=recs.filter(r=>r.item===item.name).reduce((a,r)=>a+r.qty,0);return <div key={item.id} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:".82rem"}}><span style={{color:C.muted,...mono,fontSize:".74rem"}}>{item.name}</span><span style={{...mono}}>${(qty*item.price).toFixed(0)}</span></div>;})}
+                <hr style={{border:"none",borderTop:"1px solid rgba(196,122,43,.12)",margin:"7px 0"}}/>
+                <div style={{display:"flex",justifyContent:"space-between",fontWeight:700,color:C.gold,...mono}}><span>本月合計</span><span>${total.toFixed(0)}</span></div>
+              </div>;
+            })}
+          </div>
+          <Card title="📈 物料消耗排行">
+            {(()=>{
+              const costs=items.map(item=>{const tq=records.filter(r=>r.item===item.name).reduce((a,r)=>a+r.qty,0);return{...item,tq,tc:tq*item.price};}).sort((a,b)=>b.tc-a.tc);
+              const gt=costs.reduce((a,i)=>a+i.tc,0)||1;
+              return <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr>{["物料","總領用","單位","總成本","佔比"].map(h=><th key={h} style={{padding:"10px 18px",textAlign:"left",fontSize:".68rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...mono}}>{h}</th>)}</tr></thead>
+                <tbody>{costs.map(it=>{const pct=((it.tc/gt)*100).toFixed(1);return(
+                  <tr key={it.id} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
+                    <td style={{padding:"12px 18px"}}>{it.name}</td>
+                    <td style={{padding:"12px 18px",...mono,color:C.gold}}>{it.tq.toLocaleString()}</td>
+                    <td style={{padding:"12px 18px",color:C.muted}}>{it.unit}</td>
+                    <td style={{padding:"12px 18px",...mono,color:C.caramel}}>${it.tc.toFixed(0)}</td>
+                    <td style={{padding:"12px 18px"}}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{...mono,fontSize:".74rem",color:C.muted,width:36}}>{pct}%</span><div style={{flex:1,height:5,background:"rgba(255,255,255,.08)",borderRadius:3,overflow:"hidden",minWidth:80}}><div style={{width:`${pct}%`,height:"100%",background:`linear-gradient(90deg,${C.warn},#f39c12)`,borderRadius:3}}/></div></div></td>
+                  </tr>
+                );})}</tbody>
+              </table>;
+            })()}
+          </Card>
+        </>}
+      </div>
+
+      {modal&&<Modal title={modal.title} body={modal.body} onOk={()=>{modal.onOk();setModal(null);}} onClose={()=>setModal(null)}/>}
+      <Toast msg={toast}/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
