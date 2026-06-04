@@ -246,7 +246,7 @@ function App(){
 
   // ── 帳號管理 ──
   const addUser=async()=>{
-    if(currentUser?.role!=="Super"){showToast("僅 Super Admin 可新增帳號");return;}
+    if(currentUser?.role!=="Super"&&currentUser?.role!=="Admin"){showToast("僅 Admin 以上可新增帳號");return;}
     const tn=uName.trim(),tp=uPass.trim();
     if(!tn||!tp){showToast("請填寫帳號與密碼");return;}
     if(users.find(u=>u.name===tn)){showToast("帳號已存在");return;}
@@ -255,8 +255,9 @@ function App(){
     setUName("");setUPass("");showToast("✅ 帳號已建立");
   };
   const delUser=(u)=>{
-    if(currentUser?.role!=="Super"){showToast("僅 Super Admin 可刪除");return;}
+    if(currentUser?.role!=="Super"&&currentUser?.role!=="Admin"){showToast("僅 Admin 以上可刪除帳號");return;}
     if(u.role==="Super"){showToast("無法刪除最高管理者");return;}
+    if(currentUser?.role==="Admin"&&u.role==="Admin"){showToast("Admin 無法刪除其他 Admin");return;}
     setModal({title:"刪除帳號",body:`確定刪除帳號「${u.name}」？`,onOk:async()=>{await fbDelUser(u.id);showToast("🗑️ 帳號已刪除");}});
   };
 
@@ -458,7 +459,7 @@ function App(){
             </div>
             <div>
               <Card title="👤 帳號管理" hint="Super Admin 專屬">
-                <div style={{padding:"18px 22px",display:"flex",flexDirection:"column",gap:12,opacity:currentUser?.role==="Super"?1:.45,pointerEvents:currentUser?.role==="Super"?"auto":"none"}}>
+                <div style={{padding:"18px 22px",display:"flex",flexDirection:"column",gap:12,opacity:isAdmin?1:.45,pointerEvents:isAdmin?"auto":"none"}}>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
                     <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>帳號</div><QInput value={uName} onChange={setUName} placeholder="帳號"/></div>
                     <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>密碼</div><QInput type="password" value={uPass} onChange={setUPass} placeholder="密碼"/></div>
@@ -476,7 +477,7 @@ function App(){
                     <tr key={u.id} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
                       <td style={{padding:"12px 16px",...mono}}>{u.name}</td>
                       <td style={{padding:"12px 16px"}}><Tag label={u.role} type={u.role==="Super"?"danger":u.role==="Admin"?"warn":"safe"}/></td>
-                      <td style={{padding:"12px 16px"}}>{currentUser?.role==="Super"?<SmBtn onClick={()=>delUser(u)} color="del">刪除</SmBtn>:<span style={{fontSize:".72rem",color:C.muted}}>—</span>}</td>
+                      <td style={{padding:"12px 16px"}}>{isAdmin?<SmBtn onClick={()=>delUser(u)} color="del">刪除</SmBtn>:<span style={{fontSize:".72rem",color:C.muted}}>—</span>}</td>
                     </tr>
                   ))}</tbody>
                 </table>
