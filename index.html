@@ -33,7 +33,6 @@ input,select,textarea{font-family:'Noto Serif TC',serif}
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 @keyframes loginIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
-@keyframes overlayIn{from{opacity:0}to{opacity:1}}
 .fadeUp{animation:fadeUp .45s cubic-bezier(.16,1,.3,1)}
 .loginIn{animation:loginIn .7s cubic-bezier(.16,1,.3,1)}
 </style>
@@ -43,35 +42,25 @@ input,select,textarea{font-family:'Noto Serif TC',serif}
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef } = React;
 
-// ── 安全設定 ──────────────────────────────
-const MAX_LOGIN_ATTEMPTS = 5;       // 最多嘗試次數
-const LOCKOUT_MINUTES    = 15;      // 鎖定分鐘數
-const SESSION_MINUTES    = 120;     // Session 逾時（分鐘）
-const SALT               = "WIS387"; // 密碼雜湊鹽值
+const MAX_LOGIN_ATTEMPTS=5, LOCKOUT_MINUTES=15, SESSION_MINUTES=120, SALT="WIS387";
 
-// ── 簡易密碼雜湊（SHA-256 via SubtleCrypto）──
-async function hashPass(pass) {
-  const buf = await crypto.subtle.digest("SHA-256",
-    new TextEncoder().encode(SALT + pass));
+async function hashPass(pass){
+  const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(SALT+pass));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
-// ── 預設資料 ──────────────────────────────
-const DEFAULT_ITEMS = [
-  { id:"i1", name:"咖啡豆", unit:"包", price:280, stock:100, warn:20 },
-  { id:"i2", name:"牛奶球", unit:"顆", price:3,   stock:5000,warn:500 },
-  { id:"i3", name:"糖包",   unit:"包", price:1,   stock:800, warn:100 },
-  { id:"i4", name:"攪拌棒", unit:"支", price:2,   stock:300, warn:50  },
-  { id:"i5", name:"紙杯",   unit:"個", price:1.5, stock:600, warn:100 },
+const DEFAULT_ITEMS=[
+  {id:"i1",name:"咖啡豆",unit:"包",price:280,stock:100,warn:20},
+  {id:"i2",name:"牛奶球",unit:"顆",price:3,stock:5000,warn:500},
+  {id:"i3",name:"糖包",unit:"包",price:1,stock:800,warn:100},
+  {id:"i4",name:"攪拌棒",unit:"支",price:2,stock:300,warn:50},
+  {id:"i5",name:"紙杯",unit:"個",price:1.5,stock:600,warn:100},
 ];
-const MACHINES = ["WIS-B1-001","WIS-1F-002","WIS-2F-003","WIS-3F-004"];
-
-// ── 顏色 ──────────────────────────────────
+const MACHINES=["WIS-B1-001","WIS-1F-002","WIS-2F-003","WIS-3F-004"];
 const C={espresso:"#1a0f07",roast:"#3b1f0e",caramel:"#c47a2b",cream:"#f5ead8",gold:"#e8a94a",muted:"#8a7260",danger:"#c0392b",safe:"#27ae60",warn:"#e67e22"};
 const mono={fontFamily:"'DM Mono',monospace"};
 const serif={fontFamily:"'Playfair Display',serif"};
 
-// ── 元件 ──────────────────────────────────
 function Tag({label,type}){
   const cfg={safe:{bg:"rgba(39,174,96,.15)",color:"#2ecc71",border:"rgba(39,174,96,.3)"},warn:{bg:"rgba(230,126,34,.15)",color:"#e67e22",border:"rgba(230,126,34,.3)"},danger:{bg:"rgba(192,57,43,.15)",color:"#e74c3c",border:"rgba(192,57,43,.3)"}}[type]||{bg:"rgba(255,255,255,.08)",color:"#f5ead8",border:"rgba(255,255,255,.15)"};
   return <span style={{display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:".68rem",...mono,background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`}}>{label}</span>;
@@ -92,9 +81,7 @@ function QInput({value,onChange,placeholder,type="text",style,disabled}){
   return <div style={{position:"relative"}}>
     <input type={isPass?(show?"text":"password"):type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} disabled={disabled}
       style={{width:"100%",background:disabled?"rgba(255,255,255,.03)":"rgba(255,255,255,.06)",border:"1px solid rgba(196,122,43,.22)",borderRadius:9,padding:isPass?"10px 40px 10px 14px":"10px 14px",color:C.cream,fontSize:".9rem",outline:"none",...mono,...style}}/>
-    {isPass&&<button type="button" onClick={()=>setShow(s=>!s)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:"1rem",padding:"2px 4px",lineHeight:1}}>
-      {show?"🙈":"👁️"}
-    </button>}
+    {isPass&&<button type="button" onClick={()=>setShow(s=>!s)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:"1rem",padding:"2px 4px"}}>{show?"🙈":"👁️"}</button>}
   </div>;
 }
 function Btn({onClick,children,color="caramel",style,disabled}){
@@ -123,166 +110,101 @@ function Modal({title,body,onOk,onClose,okLabel="確認",okColor="caramel"}){
     </div>
   </div>;
 }
-
-// ── 密碼強度檢查 ───────────────────────────
 function PasswordStrength({pass}){
-  if(!pass) return null;
-  const checks=[pass.length>=8, /[A-Z]/.test(pass), /[0-9]/.test(pass), /[^A-Za-z0-9]/.test(pass)];
+  if(!pass)return null;
+  const checks=[pass.length>=8,/[A-Z]/.test(pass),/[0-9]/.test(pass),/[^A-Za-z0-9]/.test(pass)];
   const score=checks.filter(Boolean).length;
   const label=["太短","弱","普通","強","非常強"][score];
   const color=["#e74c3c","#e74c3c","#e67e22","#f1c40f","#2ecc71"][score];
   return <div style={{marginTop:6}}>
-    <div style={{display:"flex",gap:4,marginBottom:4}}>
-      {checks.map((ok,i)=><div key={i} style={{flex:1,height:3,borderRadius:2,background:i<score?color:"rgba(255,255,255,.1)",transition:"background .3s"}}/>)}
-    </div>
-    <div style={{fontSize:".68rem",...mono,color}}>{label}：{[
-      pass.length<8?"需8字以上":"✓ 8字以上",
-      !/[A-Z]/.test(pass)?"需含大寫":"✓ 含大寫",
-      !/[0-9]/.test(pass)?"需含數字":"✓ 含數字",
-      !/[^A-Za-z0-9]/.test(pass)?"建議含符號":"✓ 含符號",
-    ].join(" · ")}</div>
+    <div style={{display:"flex",gap:4,marginBottom:4}}>{checks.map((ok,i)=><div key={i} style={{flex:1,height:3,borderRadius:2,background:i<score?color:"rgba(255,255,255,.1)",transition:"background .3s"}}/>)}</div>
+    <div style={{fontSize:".68rem",...mono,color}}>{label}：{[pass.length<8?"需8字以上":"✓ 8字以上",!/[A-Z]/.test(pass)?"需含大寫":"✓ 含大寫",!/[0-9]/.test(pass)?"需含數字":"✓ 含數字",!/[^A-Za-z0-9]/.test(pass)?"建議含符號":"✓ 含符號"].join(" · ")}</div>
   </div>;
 }
 
-// ══════════════════════════════════════════
-// MAIN APP
-// ══════════════════════════════════════════
 function App(){
-  const [ready,       setReady]       = useState(false);
-  const [screen,      setScreen]      = useState("login");
-  const [page,        setPage]        = useState("supply");
-  const [currentUser, setCurrentUser] = useState(null);
-  const [items,       setItems]       = useState([]);
-  const [users,       setUsers]       = useState([]);
-  const [records,     setRecords]     = useState([]);
-  const [toast,       setToast]       = useState({msg:"",type:"info"});
-  const [modal,       setModal]       = useState(null);
-  const sessionTimer  = useRef(null);
+  const [ready,setReady]=useState(false);
+  const [screen,setScreen]=useState("login");
+  const [page,setPage]=useState("supply");
+  const [currentUser,setCurrentUser]=useState(null);
+  const [items,setItems]=useState([]);
+  const [users,setUsers]=useState([]);
+  const [records,setRecords]=useState([]);
+  const [toast,setToast]=useState({msg:"",type:"info"});
+  const [modal,setModal]=useState(null);
+  const sessionTimer=useRef(null);
 
-  // 登入表單
-  const [loginUser,  setLoginUser]  = useState("");
-  const [loginPass,  setLoginPass]  = useState("");
-  const [loginFloor, setLoginFloor] = useState("B1F");
-  const [loginErr,   setLoginErr]   = useState("");
-  const [showLoginPass, setShowLoginPass] = useState(false);
-  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [loginUser,setLoginUser]=useState("");
+  const [loginPass,setLoginPass]=useState("");
+  const [loginFloor,setLoginFloor]=useState("B1F");
+  const [loginErr,setLoginErr]=useState("");
+  const [loginAttempts,setLoginAttempts]=useState(0);
+  const [lockUntil,setLockUntil]=useState(null);
+  const [showLoginPass,setShowLoginPass]=useState(false);
 
-  const [lockUntil,  setLockUntil]  = useState(null);
   const [iName,setIName]=useState("");const [iUnit,setIUnit]=useState("");const [iPrice,setIPrice]=useState("");const [iWarn,setIWarn]=useState("");const [iStock,setIStock]=useState("");
-  // 領用表單
   const [reqQtys,setReqQtys]=useState({});const [reqMach,setReqMach]=useState(MACHINES[0]);const [reqNote,setReqNote]=useState("正常");
-  // 帳號表單
   const [uName,setUName]=useState("");const [uPass,setUPass]=useState("");const [uRole,setURole]=useState("User");
-  // 補庫表單
   const [rstItemId,setRstItemId]=useState("");const [rstQty,setRstQty]=useState("");
-  // 篩選
   const [fFloor,setFFloor]=useState("");const [fItem,setFItem]=useState("");
-  // 修改密碼
   const [pwOld,setPwOld]=useState("");const [pwNew,setPwNew]=useState("");const [pwCfm,setPwCfm]=useState("");
 
-  const showToast=useCallback((msg,type="info",dur=3000)=>{
-    setToast({msg,type});setTimeout(()=>setToast({msg:"",type:"info"}),dur);
-  },[]);
+  const showToast=useCallback((msg,type="info",dur=3000)=>{setToast({msg,type});setTimeout(()=>setToast({msg:"",type:"info"}),dur);},[]);
+  const {db,ref,set,onValue,push,remove}=window._fb;
 
-  const { db, ref, set, onValue, push, remove } = window._fb;
-
-  // ── Session 逾時計時器 ──
-  const resetSessionTimer = useCallback(()=>{
-    if(sessionTimer.current) clearTimeout(sessionTimer.current);
-    sessionTimer.current = setTimeout(()=>{
-      setCurrentUser(null); setScreen("login");
-      showToast("⏱️ 閒置逾時，已自動登出","warn");
-    }, SESSION_MINUTES * 60 * 1000);
+  const resetSessionTimer=useCallback(()=>{
+    if(sessionTimer.current)clearTimeout(sessionTimer.current);
+    sessionTimer.current=setTimeout(()=>{setCurrentUser(null);setScreen("login");showToast("⏱️ 閒置逾時，已自動登出","warn");},SESSION_MINUTES*60*1000);
   },[showToast]);
 
-  useEffect(()=>{
-    if(currentUser){ resetSessionTimer(); }
-    return ()=>{ if(sessionTimer.current) clearTimeout(sessionTimer.current); };
-  },[currentUser]);
+  useEffect(()=>{if(currentUser)resetSessionTimer();return()=>{if(sessionTimer.current)clearTimeout(sessionTimer.current);};},[currentUser]);
 
-  // ── Firebase 監聽 ──
   useEffect(()=>{
-    onValue(ref(db,"items"),async(snap)=>{
+    onValue(ref(db,"items"),snap=>{
       const val=snap.val();
-      if(val){ setItems(Object.values(val)); }
-      else {
-        const obj={};
-        for(const i of DEFAULT_ITEMS){
-          obj[i.id]={...i, pass: await hashPass("admin123")};
-        }
-        // 寫入預設物料
-        const itemObj={};
-        DEFAULT_ITEMS.forEach(i=>{ itemObj[i.id]=i; });
-        set(ref(db,"items"),itemObj);
-      }
+      if(val)setItems(Object.values(val));
+      else{const o={};DEFAULT_ITEMS.forEach(i=>{o[i.id]=i;});set(ref(db,"items"),o);}
     });
-    onValue(ref(db,"users"),async(snap)=>{
+    onValue(ref(db,"users"),async snap=>{
       const val=snap.val();
-      if(val){
-        setUsers(Object.values(val));
-      } else {
-        // 第一次：寫入雜湊過的預設帳號
-        const defaults=[
-          {id:"u1",name:"ray",  role:"Super"},
-          {id:"u2",name:"jason",role:"Admin"},
-          {id:"u3",name:"user1",role:"User"},
-        ];
+      if(val){setUsers(Object.values(val));}
+      else{
+        const defs=[{id:"u1",name:"ray",role:"Super"},{id:"u2",name:"jason",role:"Admin"},{id:"u3",name:"user1",role:"User"}];
         const passes=["admin123","jason123","pass123"];
-        const obj={};
-        for(let i=0;i<defaults.length;i++){
-          obj[defaults[i].id]={...defaults[i], pass: await hashPass(passes[i])};
-        }
-        set(ref(db,"users"),obj);
+        const o={};
+        for(let i=0;i<defs.length;i++){o[defs[i].id]={...defs[i],pass:await hashPass(passes[i])};}
+        set(ref(db,"users"),o);
       }
       setReady(true);
     });
-    onValue(ref(db,"records"),(snap)=>{
+    onValue(ref(db,"records"),snap=>{
       const val=snap.val();
-      if(val){
-        const arr=Object.entries(val).map(([k,v])=>({...v,fbKey:k}));
-        arr.sort((a,b)=>new Date(b.time)-new Date(a.time));
-        setRecords(arr.slice(0,200));
-      } else setRecords([]);
+      if(val){const arr=Object.entries(val).map(([k,v])=>({...v,fbKey:k}));arr.sort((a,b)=>new Date(b.time)-new Date(a.time));setRecords(arr.slice(0,200));}
+      else setRecords([]);
     });
   },[]);
 
-  const fbSet =(path,data)=>set(ref(db,path),data);
-  const fbDel =(path)=>remove(ref(db,path));
+  const fbSet=(path,data)=>set(ref(db,path),data);
+  const fbDel=(path)=>remove(ref(db,path));
   const fbPush=(path,data)=>push(ref(db,path),data);
 
-  // ── 登入 ──
   const doLogin=async()=>{
-    // 鎖定檢查
-    if(lockUntil&&new Date()<lockUntil){
-      const left=Math.ceil((lockUntil-new Date())/60000);
-      setLoginErr(`帳號已鎖定，請等待 ${left} 分鐘後再試`);return;
-    }
+    if(lockUntil&&new Date()<lockUntil){const left=Math.ceil((lockUntil-new Date())/60000);setLoginErr(`帳號已鎖定，請等待 ${left} 分鐘`);return;}
     const hashed=await hashPass(loginPass);
     const user=users.find(u=>u.name.trim()===loginUser.trim()&&u.pass===hashed);
     if(!user){
-      const next=loginAttempts+1;
-      setLoginAttempts(next);
-      if(next>=MAX_LOGIN_ATTEMPTS){
-        const until=new Date(Date.now()+LOCKOUT_MINUTES*60000);
-        setLockUntil(until);
-        setLoginErr(`登入失敗次數過多，已鎖定 ${LOCKOUT_MINUTES} 分鐘`);
-      } else {
-        setLoginErr(`帳號或密碼錯誤（剩餘嘗試次數：${MAX_LOGIN_ATTEMPTS-next}）`);
-      }
+      const next=loginAttempts+1;setLoginAttempts(next);
+      if(next>=MAX_LOGIN_ATTEMPTS){setLockUntil(new Date(Date.now()+LOCKOUT_MINUTES*60000));setLoginErr(`失敗次數過多，鎖定 ${LOCKOUT_MINUTES} 分鐘`);}
+      else setLoginErr(`帳號或密碼錯誤（剩餘 ${MAX_LOGIN_ATTEMPTS-next} 次）`);
       return;
     }
     setLoginAttempts(0);setLockUntil(null);setLoginErr("");
     setCurrentUser({...user,floor:loginFloor,loginAt:new Date().toISOString()});
-    setPage("supply");setScreen("app");
-    showToast(`歡迎，${user.name}！Session 將於 ${SESSION_MINUTES} 分鐘後逾時`,"success");
+    setPage("supply");setScreen("app");showToast(`歡迎，${user.name}！`,"success");
   };
 
-  const confirmLogout=()=>{
-    if(sessionTimer.current)clearTimeout(sessionTimer.current);
-    setCurrentUser(null);setScreen("login");setLoginUser("");setLoginPass("");
-  };
+  const confirmLogout=()=>{if(sessionTimer.current)clearTimeout(sessionTimer.current);setCurrentUser(null);setScreen("login");setLoginUser("");setLoginPass("");};
 
-  // ── 修改密碼 ──
   const changePassword=async()=>{
     if(!pwOld||!pwNew||!pwCfm){showToast("請填寫所有欄位","error");return;}
     if(pwNew!==pwCfm){showToast("新密碼與確認密碼不一致","error");return;}
@@ -290,62 +212,53 @@ function App(){
     const oldHash=await hashPass(pwOld);
     if(oldHash!==currentUser.pass){showToast("目前密碼錯誤","error");return;}
     const newHash=await hashPass(pwNew);
-    // 只存乾淨的欄位回 Firebase，不含 floor/loginAt
-    try {
-      const cleanUser={ id:currentUser.id, name:currentUser.name, role:currentUser.role, pass:newHash };
-      await fbSet(`users/${currentUser.id}`, cleanUser);
-      setCurrentUser(prev=>({...prev, pass:newHash}));
+    try{
+      const cleanUser={id:currentUser.id,name:currentUser.name,role:currentUser.role,pass:newHash};
+      await fbSet(`users/${currentUser.id}`,cleanUser);
+      setCurrentUser(prev=>({...prev,pass:newHash}));
       setUsers(prev=>prev.map(u=>u.id===currentUser.id?{...u,pass:newHash}:u));
       setPwOld("");setPwNew("");setPwCfm("");
       showToast("✅ 密碼已成功更新","success");
-    } catch(err) {
-      showToast("❌ 寫入失敗："+err.message,"error",6000);
-    }
+    }catch(err){showToast("❌ 更新失敗："+err.message,"error",6000);}
   };
 
-  // ── 領用 ──
+  const exportBackup=()=>{
+    const data={exportedAt:new Date().toISOString(),exportedBy:currentUser.name,items,users:users.map(u=>({...u,pass:"******"})),records};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=`coffee_erp_backup_${new Date().toLocaleDateString("zh-TW").replace(/\//g,"-")}.json`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    showToast("📥 備份檔已下載","success");
+  };
+
   const submitReq=async()=>{
-    let any=false,errs=[];
-    const updates={};
-    items.forEach(item=>{
-      const qty=parseInt(reqQtys[item.id])||0;
-      if(qty<=0)return;
-      if(qty>item.stock){errs.push(`${item.name} 庫存不足（現有 ${item.stock}）`);return;}
-      any=true;
-      updates[item.id]={...item,stock:item.stock-qty};
-    });
+    let any=false,errs=[];const updates={};
+    items.forEach(item=>{const qty=parseInt(reqQtys[item.id])||0;if(qty<=0)return;if(qty>item.stock){errs.push(`${item.name} 庫存不足`);return;}any=true;updates[item.id]={...item,stock:item.stock-qty};});
     if(errs.length){showToast("⚠️ "+errs.join(" / "),"error",4000);return;}
     if(!any){showToast("請輸入至少一項數量","error");return;}
-    for(const item of Object.values(updates)) await fbSet(`items/${item.id}`,item);
-    for(const item of items){
-      const qty=parseInt(reqQtys[item.id])||0;
-      if(qty<=0)continue;
-      await fbPush("records",{time:new Date().toLocaleString("zh-TW"),machine:reqMach,floor:reqMach.split("-")[1],item:item.name,qty,user:currentUser.name,note:reqNote});
-    }
-    setReqQtys({});setReqNote("正常");
-    showToast("✅ 領用成功！庫存已更新","success");
-    resetSessionTimer();
+    for(const item of Object.values(updates))await fbSet(`items/${item.id}`,item);
+    for(const item of items){const qty=parseInt(reqQtys[item.id])||0;if(qty<=0)continue;await fbPush("records",{time:new Date().toLocaleString("zh-TW"),machine:reqMach,floor:reqMach.split("-")[1],item:item.name,qty,user:currentUser.name,note:reqNote});}
+    setReqQtys({});setReqNote("正常");showToast("✅ 領用成功！","success");resetSessionTimer();
     const low=items.filter(i=>updates[i.id]&&updates[i.id].stock<=i.warn);
     if(low.length)setTimeout(()=>showToast(`🔔 警示：${low.map(i=>i.name).join("、")} 庫存偏低！`,"warn",5000),2000);
   };
 
-  // ── 物料管理 ──
   const addItem=async()=>{
     if(!iName||!iUnit){showToast("請填寫名稱與單位","error");return;}
     const id="i"+Date.now();
     await fbSet(`items/${id}`,{id,name:iName,unit:iUnit,price:parseFloat(iPrice)||0,stock:parseInt(iStock)||0,warn:parseInt(iWarn)||20});
-    setIName("");setIUnit("");setIPrice("");setIWarn("");setIStock("");
-    showToast("✅ 物料已新增","success");
+    setIName("");setIUnit("");setIPrice("");setIWarn("");setIStock("");showToast("✅ 物料已新增","success");
   };
   const editItem=(it)=>{
     setIName(it.name);setIUnit(it.unit);setIPrice(String(it.price));setIWarn(String(it.warn));setIStock(String(it.stock));
-    setModal({title:`編輯：${it.name}`,body:"確認以目前欄位內容更新此物料？",onOk:async()=>{
+    setModal({title:`編輯：${it.name}`,body:"確認更新此物料？",onOk:async()=>{
       await fbSet(`items/${it.id}`,{...it,name:iName||it.name,unit:iUnit||it.unit,price:parseFloat(iPrice)||it.price,warn:parseInt(iWarn)||it.warn,stock:parseInt(iStock)||it.stock});
-      setIName("");setIUnit("");setIPrice("");setIWarn("");setIStock("");
-      showToast("✅ 物料已更新","success");
+      setIName("");setIUnit("");setIPrice("");setIWarn("");setIStock("");showToast("✅ 物料已更新","success");
     }});
   };
-  const delItem=(it)=>setModal({title:"刪除物料",body:`確定刪除「${it.name}」？此操作無法復原。`,okColor:"red",okLabel:"確定刪除",onOk:async()=>{await fbDel(`items/${it.id}`);showToast("🗑️ 已刪除");}});
+  const delItem=(it)=>setModal({title:"刪除物料",body:`確定刪除「${it.name}」？`,okColor:"red",okLabel:"確定刪除",onOk:async()=>{await fbDel(`items/${it.id}`);showToast("🗑️ 已刪除");}});
   const quickRst=(it)=>{
     let q=0;
     setModal({title:`快速補庫：${it.name}`,body:<div><div style={{marginBottom:10}}>現有：<strong style={{color:C.gold}}>{it.stock} {it.unit}</strong></div><input type="number" defaultValue="" onChange={e=>q=parseInt(e.target.value)||0} placeholder="50" style={{width:"100%",background:"rgba(255,255,255,.06)",border:"1px solid rgba(196,122,43,.25)",borderRadius:9,padding:"10px 14px",color:C.cream,...mono,outline:"none"}}/></div>,
@@ -354,15 +267,13 @@ function App(){
   const doRestock=async()=>{
     const q=parseInt(rstQty)||0,it=items.find(i=>i.id===rstItemId);
     if(!it||q<=0){showToast("請選擇物料並輸入數量","error");return;}
-    await fbSet(`items/${it.id}`,{...it,stock:it.stock+q});setRstQty("");
-    showToast(`✅ ${it.name} 補庫 ${q} ${it.unit} 完成`,"success");
+    await fbSet(`items/${it.id}`,{...it,stock:it.stock+q});setRstQty("");showToast(`✅ ${it.name} 補庫完成`,"success");
   };
 
-  // ── 帳號管理 ──
   const isAdmin=currentUser?.role==="Super"||currentUser?.role==="Admin";
   const canManageUser=(u)=>{
-    if(currentUser?.role==="Super") return u.role!=="Super"||u.id===currentUser.id;
-    if(currentUser?.role==="Admin") return u.role==="User";
+    if(currentUser?.role==="Super")return u.role!=="Super"||u.id===currentUser.id;
+    if(currentUser?.role==="Admin")return u.role==="User";
     return false;
   };
   const addUser=async()=>{
@@ -373,15 +284,13 @@ function App(){
     if(users.find(u=>u.name===tn)){showToast("帳號已存在","error");return;}
     if(currentUser?.role==="Admin"&&uRole!=="User"){showToast("Admin 只能新增 User 帳號","error");return;}
     const id="u"+Date.now();
-    const hashed=await hashPass(tp);
-    await fbSet(`users/${id}`,{id,name:tn,pass:hashed,role:uRole});
+    await fbSet(`users/${id}`,{id,name:tn,pass:await hashPass(tp),role:uRole});
     setUName("");setUPass("");showToast("✅ 帳號已建立","success");
   };
   const delUser=(u)=>{
-    if(!canManageUser(u)){showToast("權限不足，無法刪除此帳號","error");return;}
-    setModal({title:"刪除帳號",body:`確定刪除帳號「${u.name}」？此操作無法復原。`,okColor:"red",okLabel:"確定刪除",onOk:async()=>{await fbDel(`users/${u.id}`);showToast("🗑️ 帳號已刪除");}});
+    if(!canManageUser(u)){showToast("權限不足","error");return;}
+    setModal({title:"刪除帳號",body:`確定刪除帳號「${u.name}」？`,okColor:"red",okLabel:"確定刪除",onOk:async()=>{await fbDel(`users/${u.id}`);showToast("🗑️ 帳號已刪除");}});
   };
-  // Admin 重設他人密碼
   const resetUserPass=(u)=>{
     if(!canManageUser(u)){showToast("權限不足","error");return;}
     let newP="";
@@ -390,76 +299,58 @@ function App(){
       <input type="password" onChange={e=>newP=e.target.value} placeholder="新密碼" style={{width:"100%",background:"rgba(255,255,255,.06)",border:"1px solid rgba(196,122,43,.25)",borderRadius:9,padding:"10px 14px",color:C.cream,...mono,outline:"none"}}/>
     </div>,onOk:async()=>{
       if(newP.length<8){showToast("密碼至少需要 8 個字元","error");return;}
-      const hashed=await hashPass(newP);
-      await fbSet(`users/${u.id}`,{...u,pass:hashed});
+      await fbSet(`users/${u.id}`,{...u,pass:await hashPass(newP)});
       showToast(`✅ ${u.name} 的密碼已重設`,"success");
     }});
   };
 
-  // ── 匯出備份 ──
-  const exportBackup=()=>{
-    const data={ exportedAt: new Date().toISOString(), exportedBy: currentUser.name, items, users: users.map(u=>({...u,pass:"******"})), records };
-    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url;
-    a.download=`coffee_erp_backup_${new Date().toLocaleDateString("zh-TW").replace(/\//g,"-")}.json`;
-    document.body.appendChild(a);a.click();
-    document.body.removeChild(a);URL.revokeObjectURL(url);
-    showToast("📥 備份檔已下載","success");
-  };
-
   const monthlyCost=()=>{const n=new Date();return records.filter(r=>{const d=new Date(r.time);return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}).reduce((a,r)=>{const i=items.find(x=>x.name===r.item);return a+(i?i.price*r.qty:0);},0).toFixed(0);};
+  const isLocked=lockUntil&&new Date()<lockUntil;
   const lowCount=items.filter(i=>i.stock<=i.warn).length;
   const todayRecs=records.filter(r=>{const d=new Date(r.time),n=new Date();return d.getDate()===n.getDate()&&d.getMonth()===n.getMonth();});
   const filteredRecs=records.filter(r=>(!fFloor||r.floor===fFloor)&&(!fItem||r.item===fItem));
-  const isLocked=lockUntil&&new Date()<lockUntil;
 
-  // ── 載入中 ──
-  if(!ready) return (
+  if(!ready)return(
     <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:C.espresso,gap:20}}>
       <div style={{...serif,fontSize:"2rem",color:C.gold}}>☕ 上班趣 Coffee</div>
       <div style={{color:C.muted,...mono,fontSize:".85rem",animation:"blink 1s infinite"}}>連線 Firebase 中...</div>
     </div>
   );
 
-  // ── 登入畫面 ──
-  if(screen==="login") return (
+  if(screen==="login")return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.espresso}}>
       <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 60% at 20% 10%,rgba(196,122,43,.18) 0%,transparent 60%)",pointerEvents:"none"}}/>
       <div className="loginIn" style={{background:`linear-gradient(145deg,${C.roast},#2a1508)`,border:"1px solid rgba(196,122,43,.38)",borderRadius:22,padding:"52px 44px",width:"min(420px,93vw)",boxShadow:"0 32px 80px rgba(0,0,0,.65)",zIndex:1}}>
         <div style={{...serif,fontSize:"2.1rem",fontWeight:900,color:C.gold,textAlign:"center"}}>☕ 上班趣 Coffee</div>
         <div style={{textAlign:"center",color:C.muted,fontSize:".75rem",margin:"6px 0 32px",...mono}}>WISTRON ERP · COFFEE INVENTORY</div>
-        {isLocked&&<div style={{background:"rgba(192,57,43,.15)",border:"1px solid rgba(192,57,43,.4)",borderRadius:9,padding:"10px 14px",color:"#e74c3c",fontSize:".78rem",...mono,marginBottom:16,textAlign:"center"}}>
-          🔒 帳號已鎖定，請 {LOCKOUT_MINUTES} 分鐘後再試
-        </div>}
-        {[["帳號",loginUser,setLoginUser,"text","輸入帳號"],["密碼",loginPass,setLoginPass,"password","輸入密碼"]].map(([l,v,s,t,ph])=>(
-          <div key={l} style={{marginBottom:17}}>
-            <div style={{fontSize:".7rem",...mono,color:C.muted,marginBottom:7,letterSpacing:".1em"}}>{l}</div>
-            <input type={t} value={v} onChange={e=>s(e.target.value)} placeholder={ph} disabled={isLocked}
-              onKeyDown={e=>e.key==="Enter"&&!isLocked&&doLogin()}
-              style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:10,padding:"12px 16px",color:C.cream,fontSize:".95rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}}/>
+        {isLocked&&<div style={{background:"rgba(192,57,43,.15)",border:"1px solid rgba(192,57,43,.4)",borderRadius:9,padding:"10px 14px",color:"#e74c3c",fontSize:".78rem",...mono,marginBottom:16,textAlign:"center"}}>🔒 帳號已鎖定</div>}
+        <div style={{marginBottom:17}}>
+          <div style={{fontSize:".7rem",...mono,color:C.muted,marginBottom:7,letterSpacing:".1em"}}>帳號</div>
+          <input type="text" value={loginUser} onChange={e=>setLoginUser(e.target.value)} placeholder="輸入帳號" disabled={isLocked} onKeyDown={e=>e.key==="Enter"&&!isLocked&&doLogin()}
+            style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:10,padding:"12px 16px",color:C.cream,fontSize:".95rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}}/>
+        </div>
+        <div style={{marginBottom:17}}>
+          <div style={{fontSize:".7rem",...mono,color:C.muted,marginBottom:7,letterSpacing:".1em"}}>密碼</div>
+          <div style={{position:"relative"}}>
+            <input type={showLoginPass?"text":"password"} value={loginPass} onChange={e=>setLoginPass(e.target.value)} placeholder="輸入密碼" disabled={isLocked} onKeyDown={e=>e.key==="Enter"&&!isLocked&&doLogin()}
+              style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:10,padding:"12px 42px 12px 16px",color:C.cream,fontSize:".95rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}}/>
+            <button type="button" onClick={()=>setShowLoginPass(s=>!s)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:"1rem",padding:"2px 4px"}}>{showLoginPass?"🙈":"👁️"}</button>
           </div>
-        ))}
+        </div>
         <div style={{marginBottom:22}}>
           <div style={{fontSize:".7rem",...mono,color:C.muted,marginBottom:7,letterSpacing:".1em"}}>所在樓層</div>
           <select value={loginFloor} onChange={e=>setLoginFloor(e.target.value)} style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:10,padding:"12px 16px",color:C.cream,fontSize:".93rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}}>
             {["B1F","1F","2F","3F"].map(f=><option key={f} style={{background:C.roast}}>{f}</option>)}
           </select>
         </div>
-        <Btn onClick={doLogin} disabled={isLocked} style={{width:"100%",padding:14,borderRadius:10,fontSize:"1rem",boxShadow:"0 4px 20px rgba(196,122,43,.35)"}}>
-          {isLocked?"帳號已鎖定":"登入系統"}
-        </Btn>
+        <Btn onClick={doLogin} disabled={isLocked} style={{width:"100%",padding:14,borderRadius:10,fontSize:"1rem",boxShadow:"0 4px 20px rgba(196,122,43,.35)"}}>登入系統</Btn>
         {loginErr&&<div style={{color:"#e74c3c",fontSize:".8rem",textAlign:"center",marginTop:10,...mono}}>{loginErr}</div>}
-        <div style={{textAlign:"center",marginTop:18,color:C.muted,fontSize:".7rem",...mono}}>
-          🔐 密碼已加密儲存 · ⏱️ {SESSION_MINUTES}分鐘自動登出 · 🔒 {MAX_LOGIN_ATTEMPTS}次失敗鎖定
-        </div>
+        <div style={{textAlign:"center",marginTop:18,color:C.muted,fontSize:".7rem",...mono}}>🔐 SHA-256加密 · ⏱️ {SESSION_MINUTES}分鐘自動登出 · 🔒 {MAX_LOGIN_ATTEMPTS}次失敗鎖定</div>
       </div>
     </div>
   );
 
-  // ── 登出確認 ──
-  if(screen==="logout") return (
+  if(screen==="logout")return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.espresso}}>
       <div className="loginIn" style={{background:`linear-gradient(145deg,${C.roast},#1e0e06)`,border:"1px solid rgba(196,122,43,.35)",borderRadius:22,padding:"52px 44px",width:"min(400px,92vw)",textAlign:"center",boxShadow:"0 32px 80px rgba(0,0,0,.7)"}}>
         <div style={{fontSize:"3.2rem",marginBottom:18}}>🚪</div>
@@ -472,13 +363,10 @@ function App(){
     </div>
   );
 
-  // ── 主畫面 ──
-  return (
+  return(
     <>
       <nav style={{position:"sticky",top:0,zIndex:50,background:"rgba(26,15,7,.93)",backdropFilter:"blur(18px)",borderBottom:"1px solid rgba(196,122,43,.2)",display:"flex",alignItems:"center",padding:"0 24px",height:62,gap:4,flexWrap:"nowrap"}}>
-        <div style={{...serif,fontWeight:900,fontSize:"1.15rem",color:C.gold,marginRight:"auto",whiteSpace:"nowrap"}}>
-          ☕ 上班趣 Coffee <span style={{color:C.muted,fontWeight:400,fontSize:".68rem",...mono,marginLeft:8}}>⚡ 即時同步</span>
-        </div>
+        <div style={{...serif,fontWeight:900,fontSize:"1.15rem",color:C.gold,marginRight:"auto",whiteSpace:"nowrap"}}>☕ 上班趣 Coffee <span style={{color:C.muted,fontWeight:400,fontSize:".68rem",...mono,marginLeft:8}}>⚡ 即時同步</span></div>
         <div style={{display:"flex",gap:2,flexShrink:0}}>
           {[{id:"supply",label:"📦 物料供應",always:true},{id:"records",label:"📋 領用紀錄",always:true},{id:"admin",label:"⚙️ 後台管理",always:false},{id:"analytics",label:"📊 成本分析",always:false},{id:"profile",label:"👤 我的帳號",always:true}].filter(t=>t.always||isAdmin).map(t=>(
             <div key={t.id} onClick={()=>setPage(t.id)} style={{padding:"7px 15px",borderRadius:8,cursor:"pointer",fontSize:".78rem",color:page===t.id?C.gold:C.muted,background:page===t.id?"rgba(196,122,43,.12)":"transparent",border:page===t.id?"1px solid rgba(196,122,43,.3)":"1px solid transparent",...mono,whiteSpace:"nowrap"}}>{t.label}</div>
@@ -493,7 +381,6 @@ function App(){
 
       <div style={{padding:"32px 24px",maxWidth:1200,margin:"0 auto"}} className="fadeUp" onClick={resetSessionTimer}>
 
-        {/* ── 物料供應 ── */}
         {page==="supply"&&<>
           <div style={{...serif,fontSize:"1.85rem",color:C.gold,marginBottom:5}}>物料供應台</div>
           <div style={{color:C.muted,fontSize:".8rem",marginBottom:28,...mono}}>MATERIAL SUPPLY · 即時雲端庫存</div>
@@ -544,11 +431,9 @@ function App(){
               </select>
               <Btn onClick={submitReq}>✓ 確認領用</Btn>
             </div>
-                      </Card>
-          </div>
+          </Card>
         </>}
 
-        {/* ── 領用紀錄 ── */}
         {page==="records"&&<>
           <div style={{...serif,fontSize:"1.85rem",color:C.gold,marginBottom:5}}>領用紀錄</div>
           <div style={{color:C.muted,fontSize:".8rem",marginBottom:28,...mono}}>USAGE RECORDS</div>
@@ -579,7 +464,6 @@ function App(){
           </Card>
         </>}
 
-        {/* ── 後台管理 ── */}
         {page==="admin"&&<>
           <div style={{...serif,fontSize:"1.85rem",color:C.gold,marginBottom:5}}>後台管理</div>
           <div style={{color:C.muted,fontSize:".8rem",marginBottom:28,...mono}}>ADMIN PANEL</div>
@@ -614,11 +498,7 @@ function App(){
                 <div style={{padding:"18px 22px",display:"flex",flexDirection:"column",gap:12}}>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
                     <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>帳號</div><QInput value={uName} onChange={setUName} placeholder="帳號"/></div>
-                    <div>
-                      <div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>密碼</div>
-                      <QInput type="password" value={uPass} onChange={setUPass} placeholder="至少 8 字元"/>
-                      <PasswordStrength pass={uPass}/>
-                    </div>
+                    <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>密碼</div><QInput type="password" value={uPass} onChange={setUPass} placeholder="至少 8 字元"/><PasswordStrength pass={uPass}/></div>
                   </div>
                   <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>權限等級</div>
                     <select value={uRole} onChange={e=>setURole(e.target.value)} style={{width:"100%",background:"rgba(255,255,255,.06)",border:"1px solid rgba(196,122,43,.22)",borderRadius:9,padding:"10px 14px",color:C.cream,...mono,fontSize:".88rem",outline:"none"}}>
@@ -662,7 +542,6 @@ function App(){
           </div>
         </>}
 
-        {/* ── 成本分析 ── */}
         {page==="analytics"&&<>
           <div style={{...serif,fontSize:"1.85rem",color:C.gold,marginBottom:5}}>成本分析</div>
           <div style={{color:C.muted,fontSize:".8rem",marginBottom:28,...mono}}>COST ANALYTICS</div>
@@ -698,11 +577,10 @@ function App(){
           </Card>
         </>}
 
-        {/* ── 我的帳號 ── */}
         {page==="profile"&&<>
           <div style={{...serif,fontSize:"1.85rem",color:C.gold,marginBottom:5}}>我的帳號</div>
           <div style={{color:C.muted,fontSize:".8rem",marginBottom:28,...mono}}>PROFILE · 個人資料與密碼管理</div>
-          {/* 備份區塊 */}
+
           <Card title="💾 資料備份" hint="建議每月備份一次">
             <div style={{padding:"22px",display:"flex",flexDirection:"column",gap:14}}>
               <div style={{background:"rgba(255,255,255,.04)",borderRadius:10,padding:"14px 16px",fontSize:".82rem",color:C.muted,lineHeight:1.8,...mono}}>
@@ -711,18 +589,16 @@ function App(){
                 <div>👤 帳號數量：<strong style={{color:C.cream}}>{users.length} 個</strong></div>
                 <div style={{marginTop:8,fontSize:".72rem",color:C.muted}}>⚠️ 備份檔中密碼欄位已遮蔽，不含明文資訊</div>
               </div>
-              <Btn onClick={exportBackup} color="green" style={{padding:"12px"}}>
-                📥 立即下載備份檔（JSON）
-              </Btn>
+              <Btn onClick={exportBackup} color="green" style={{padding:"12px"}}>📥 立即下載備份檔（JSON）</Btn>
               <div style={{fontSize:".72rem",color:C.muted,...mono,lineHeight:1.7,background:"rgba(255,255,255,.03)",borderRadius:8,padding:"10px 12px"}}>
-                備份檔包含：所有物料庫存、領用紀錄、帳號清單（密碼已隱藏）。<br/>
-                如需還原請聯絡 Ray（Super Admin）重新匯入。
+                備份檔包含：所有物料庫存、領用紀錄、帳號清單（密碼已隱藏）。如需還原請聯絡 Ray（Super Admin）。
               </div>
             </div>
           </Card>
 
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:22}}>
-            <Card title="📋 帳號資訊">              <div style={{padding:"22px"}}>
+            <Card title="📋 帳號資訊">
+              <div style={{padding:"22px"}}>
                 {[["帳號名稱",currentUser?.name],["權限等級",currentUser?.role],["登入樓層",currentUser?.floor],["登入時間",currentUser?.loginAt?new Date(currentUser.loginAt).toLocaleString("zh-TW"):"—"],["Session 逾時",`${SESSION_MINUTES} 分鐘閒置`]].map(([l,v])=>(
                   <div key={l} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
                     <span style={{fontSize:".8rem",color:C.muted,...mono}}>{l}</span>
@@ -733,15 +609,8 @@ function App(){
             </Card>
             <Card title="🔑 修改密碼">
               <div style={{padding:"22px",display:"flex",flexDirection:"column",gap:14}}>
-                <div>
-                  <div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>目前密碼</div>
-                  <QInput type="password" value={pwOld} onChange={setPwOld} placeholder="輸入目前密碼"/>
-                </div>
-                <div>
-                  <div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>新密碼</div>
-                  <QInput type="password" value={pwNew} onChange={setPwNew} placeholder="至少 8 字元"/>
-                  <PasswordStrength pass={pwNew}/>
-                </div>
+                <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>目前密碼</div><QInput type="password" value={pwOld} onChange={setPwOld} placeholder="輸入目前密碼"/></div>
+                <div><div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>新密碼</div><QInput type="password" value={pwNew} onChange={setPwNew} placeholder="至少 8 字元"/><PasswordStrength pass={pwNew}/></div>
                 <div>
                   <div style={{fontSize:".7rem",color:C.muted,...mono,marginBottom:5}}>確認新密碼</div>
                   <QInput type="password" value={pwCfm} onChange={setPwCfm} placeholder="再次輸入新密碼"/>
@@ -750,7 +619,7 @@ function App(){
                 </div>
                 <Btn onClick={changePassword} color="green" style={{padding:"11px"}}>🔑 確認修改密碼</Btn>
                 <div style={{fontSize:".72rem",color:C.muted,...mono,lineHeight:1.7,background:"rgba(255,255,255,.04)",borderRadius:8,padding:"10px 12px"}}>
-                  密碼要求：至少 8 字元，建議包含大寫字母、數字及符號以提升安全性。
+                  密碼要求：至少 8 字元，建議包含大寫字母、數字及符號。
                 </div>
               </div>
             </Card>
