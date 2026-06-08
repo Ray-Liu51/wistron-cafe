@@ -291,12 +291,16 @@ function App(){
     if(oldHash!==currentUser.pass){showToast("目前密碼錯誤","error");return;}
     const newHash=await hashPass(pwNew);
     // 只存乾淨的欄位回 Firebase，不含 floor/loginAt
-    const cleanUser={ id:currentUser.id, name:currentUser.name, role:currentUser.role, pass:newHash };
-    await fbSet(`users/${currentUser.id}`, cleanUser);
-    setCurrentUser(prev=>({...prev, pass:newHash}));
-    setUsers(prev=>prev.map(u=>u.id===currentUser.id?{...u,pass:newHash}:u));
-    setPwOld("");setPwNew("");setPwCfm("");
-    showToast("✅ 密碼已成功更新","success");
+    try {
+      const cleanUser={ id:currentUser.id, name:currentUser.name, role:currentUser.role, pass:newHash };
+      await fbSet(`users/${currentUser.id}`, cleanUser);
+      setCurrentUser(prev=>({...prev, pass:newHash}));
+      setUsers(prev=>prev.map(u=>u.id===currentUser.id?{...u,pass:newHash}:u));
+      setPwOld("");setPwNew("");setPwCfm("");
+      showToast("✅ 密碼已成功更新","success");
+    } catch(err) {
+      showToast("❌ 寫入失敗："+err.message,"error",6000);
+    }
   };
 
   // ── 領用 ──
