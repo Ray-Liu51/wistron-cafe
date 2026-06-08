@@ -87,8 +87,15 @@ function Card({title,hint,children,style}){
   </div>;
 }
 function QInput({value,onChange,placeholder,type="text",style,disabled}){
-  return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} disabled={disabled}
-    style={{width:"100%",background:disabled?"rgba(255,255,255,.03)":"rgba(255,255,255,.06)",border:"1px solid rgba(196,122,43,.22)",borderRadius:9,padding:"10px 14px",color:C.cream,fontSize:".9rem",outline:"none",...mono,...style}}/>;
+  const [show,setShow]=useState(false);
+  const isPass=type==="password";
+  return <div style={{position:"relative"}}>
+    <input type={isPass?(show?"text":"password"):type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} disabled={disabled}
+      style={{width:"100%",background:disabled?"rgba(255,255,255,.03)":"rgba(255,255,255,.06)",border:"1px solid rgba(196,122,43,.22)",borderRadius:9,padding:isPass?"10px 40px 10px 14px":"10px 14px",color:C.cream,fontSize:".9rem",outline:"none",...mono,...style}}/>
+    {isPass&&<button type="button" onClick={()=>setShow(s=>!s)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:"1rem",padding:"2px 4px",lineHeight:1}}>
+      {show?"🙈":"👁️"}
+    </button>}
+  </div>;
 }
 function Btn({onClick,children,color="caramel",style,disabled}){
   const bg={caramel:`linear-gradient(135deg,${C.caramel},${C.gold})`,green:"linear-gradient(135deg,#27ae60,#2ecc71)",red:`linear-gradient(135deg,${C.danger},#e74c3c)`,ghost:"rgba(255,255,255,.06)"}[color];
@@ -157,10 +164,10 @@ function App(){
   const [loginPass,  setLoginPass]  = useState("");
   const [loginFloor, setLoginFloor] = useState("B1F");
   const [loginErr,   setLoginErr]   = useState("");
+  const [showLoginPass, setShowLoginPass] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
-  const [lockUntil,  setLockUntil]  = useState(null);
 
-  // 物料表單
+  const [lockUntil,  setLockUntil]  = useState(null);
   const [iName,setIName]=useState("");const [iUnit,setIUnit]=useState("");const [iPrice,setIPrice]=useState("");const [iWarn,setIWarn]=useState("");const [iStock,setIStock]=useState("");
   // 領用表單
   const [reqQtys,setReqQtys]=useState({});const [reqMach,setReqMach]=useState(MACHINES[0]);const [reqNote,setReqNote]=useState("正常");
