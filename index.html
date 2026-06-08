@@ -396,6 +396,19 @@ function App(){
     }});
   };
 
+  // ── 匯出備份 ──
+  const exportBackup=()=>{
+    const data={ exportedAt: new Date().toISOString(), exportedBy: currentUser.name, items, users: users.map(u=>({...u,pass:"******"})), records };
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=`coffee_erp_backup_${new Date().toLocaleDateString("zh-TW").replace(/\//g,"-")}.json`;
+    document.body.appendChild(a);a.click();
+    document.body.removeChild(a);URL.revokeObjectURL(url);
+    showToast("📥 備份檔已下載","success");
+  };
+
   const monthlyCost=()=>{const n=new Date();return records.filter(r=>{const d=new Date(r.time);return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}).reduce((a,r)=>{const i=items.find(x=>x.name===r.item);return a+(i?i.price*r.qty:0);},0).toFixed(0);};
   const lowCount=items.filter(i=>i.stock<=i.warn).length;
   const todayRecs=records.filter(r=>{const d=new Date(r.time),n=new Date();return d.getDate()===n.getDate()&&d.getMonth()===n.getMonth();});
@@ -531,7 +544,8 @@ function App(){
               </select>
               <Btn onClick={submitReq}>✓ 確認領用</Btn>
             </div>
-          </Card>
+                      </Card>
+          </div>
         </>}
 
         {/* ── 領用紀錄 ── */}
@@ -688,9 +702,27 @@ function App(){
         {page==="profile"&&<>
           <div style={{...serif,fontSize:"1.85rem",color:C.gold,marginBottom:5}}>我的帳號</div>
           <div style={{color:C.muted,fontSize:".8rem",marginBottom:28,...mono}}>PROFILE · 個人資料與密碼管理</div>
+          {/* 備份區塊 */}
+          <Card title="💾 資料備份" hint="建議每月備份一次">
+            <div style={{padding:"22px",display:"flex",flexDirection:"column",gap:14}}>
+              <div style={{background:"rgba(255,255,255,.04)",borderRadius:10,padding:"14px 16px",fontSize:".82rem",color:C.muted,lineHeight:1.8,...mono}}>
+                <div>📦 物料項目：<strong style={{color:C.cream}}>{items.length} 項</strong></div>
+                <div>📋 領用紀錄：<strong style={{color:C.cream}}>{records.length} 筆</strong></div>
+                <div>👤 帳號數量：<strong style={{color:C.cream}}>{users.length} 個</strong></div>
+                <div style={{marginTop:8,fontSize:".72rem",color:C.muted}}>⚠️ 備份檔中密碼欄位已遮蔽，不含明文資訊</div>
+              </div>
+              <Btn onClick={exportBackup} color="green" style={{padding:"12px"}}>
+                📥 立即下載備份檔（JSON）
+              </Btn>
+              <div style={{fontSize:".72rem",color:C.muted,...mono,lineHeight:1.7,background:"rgba(255,255,255,.03)",borderRadius:8,padding:"10px 12px"}}>
+                備份檔包含：所有物料庫存、領用紀錄、帳號清單（密碼已隱藏）。<br/>
+                如需還原請聯絡 Ray（Super Admin）重新匯入。
+              </div>
+            </div>
+          </Card>
+
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:22}}>
-            <Card title="📋 帳號資訊">
-              <div style={{padding:"22px"}}>
+            <Card title="📋 帳號資訊">              <div style={{padding:"22px"}}>
                 {[["帳號名稱",currentUser?.name],["權限等級",currentUser?.role],["登入樓層",currentUser?.floor],["登入時間",currentUser?.loginAt?new Date(currentUser.loginAt).toLocaleString("zh-TW"):"—"],["Session 逾時",`${SESSION_MINUTES} 分鐘閒置`]].map(([l,v])=>(
                   <div key={l} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
                     <span style={{fontSize:".8rem",color:C.muted,...mono}}>{l}</span>
