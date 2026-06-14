@@ -81,7 +81,7 @@ const DEFAULT_ITEMS=[
   {id:"i4",name:"攪拌棒",unit:"支",price:2,stock:300,warn:50},
   {id:"i5",name:"紙杯",unit:"個",price:1.5,stock:600,warn:100},
 ];
-const MACHINES=["WIS-B1-001","WIS-1F-002","WIS-2F-003","WIS-3F-004"];
+const DEFAULT_MACHINES=["W1","W2","W3","W4","W5"];
 const C={espresso:"#1a0f07",roast:"#3b1f0e",caramel:"#c47a2b",cream:"#f5ead8",gold:"#e8a94a",muted:"#8a7260",danger:"#c0392b",safe:"#27ae60",warn:"#e67e22"};
 const mono={fontFamily:"'DM Mono',monospace"};
 const serif={fontFamily:"'Playfair Display',serif"};
@@ -167,8 +167,10 @@ function App(){
   const [lockUntil,setLockUntil]=useState(null);
   const [showLoginPass,setShowLoginPass]=useState(false);
 
-  const [iName,setIName]=useState("");const [iUnit,setIUnit]=useState("");const [iPrice,setIPrice]=useState("");const [iWarn,setIWarn]=useState("");const [iStock,setIStock]=useState("");
-  const [reqQtys,setReqQtys]=useState({});const [reqMach,setReqMach]=useState(MACHINES[0]);const [reqNote,setReqNote]=useState("正常");
+  const [machines, setMachines] = useState([]);
+  const [editMachineIdx, setEditMachineIdx] = useState(null);
+  const [editMachineName, setEditMachineName] = useState("");  const [iUnit,setIUnit]=useState("");const [iWarn,setIWarn]=useState("");const [iStock,setIStock]=useState("");
+  const [reqQtys,setReqQtys]=useState({});const [reqMach,setReqMach]=useState("");const [reqNote,setReqNote]=useState("正常");
   const [uName,setUName]=useState("");const [uPass,setUPass]=useState("");const [uRole,setURole]=useState("User");
   const [rstItemId,setRstItemId]=useState("");const [rstQty,setRstQty]=useState("");
   const [fFloor,setFFloor]=useState("");const [fItem,setFItem]=useState("");
@@ -185,6 +187,15 @@ function App(){
   useEffect(()=>{if(currentUser)resetSessionTimer();return()=>{if(sessionTimer.current)clearTimeout(sessionTimer.current);};},[currentUser]);
 
   useEffect(()=>{
+    onValue(ref(db,"machines"),snap=>{
+      const val=snap.val();
+      if(val)setMachines(Object.values(val).sort((a,b)=>a.idx-b.idx).map(m=>m.name));
+      else{
+        const o={};
+        DEFAULT_MACHINES.forEach((name,i)=>{o[`m${i+1}`]={id:`m${i+1}`,idx:i,name};});
+        set(ref(db,"machines"),o);
+      }
+    });
     onValue(ref(db,"items"),snap=>{
       const val=snap.val();
       if(val)setItems(Object.values(val));
@@ -264,7 +275,7 @@ function App(){
     if(errs.length){showToast("⚠️ "+errs.join(" / "),"error",4000);return;}
     if(!any){showToast("請輸入至少一項數量","error");return;}
     for(const item of Object.values(updates))await fbSet(`items/${item.id}`,item);
-    for(const item of items){const qty=parseInt(reqQtys[item.id])||0;if(qty<=0)continue;await fbPush("records",{time:new Date().toLocaleString("zh-TW"),machine:reqMach,floor:reqMach.split("-")[1],item:item.name,qty,user:currentUser.name,note:reqNote});}
+    for(const item of items){const qty=parseInt(reqQtys[item.id])||0;if(qty<=0)continue;await fbPush("records",{time:new Date().toLocaleString("zh-TW"),machine:reqMach,floor:reqMach,item:item.name,qty,user:currentUser.name,note:reqNote});}
     setReqQtys({});setReqNote("正常");showToast("✅ 領用成功！","success");resetSessionTimer();
     const low=items.filter(i=>updates[i.id]&&updates[i.id].stock<=i.warn);
     if(low.length)setTimeout(()=>showToast(`🔔 警示：${low.map(i=>i.name).join("、")} 庫存偏低！`,"warn",5000),2000);
@@ -456,8 +467,8 @@ function App(){
             </div>
             <div style={{padding:"14px 22px",display:"flex",alignItems:"center",gap:12,borderTop:"1px solid rgba(196,122,43,.1)",flexWrap:"wrap"}}>
               <span style={{fontSize:".76rem",color:C.muted,...mono}}>機台：</span>
-              <select value={reqMach} onChange={e=>setReqMach(e.target.value)} style={{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"8px 13px",color:C.cream,...mono,fontSize:".82rem",outline:"none"}}>
-                {MACHINES.map(m=><option key={m} style={{background:C.roast}}>{m}</option>)}
+              <select value={reqMach||machines[0]} onChange={e=>setReqMach(e.target.value)} style={{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"8px 13px",color:C.cream,...mono,fontSize:".82rem",outline:"none"}}>
+                {machines.map(m=><option key={m} style={{background:C.roast}}>{m}</option>)}
               </select>
               <span style={{fontSize:".76rem",color:C.muted,...mono}}>狀況：</span>
               <select value={reqNote} onChange={e=>setReqNote(e.target.value)} style={{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"8px 13px",color:C.cream,...mono,fontSize:".82rem",outline:"none"}}>
@@ -503,6 +514,69 @@ function App(){
         {page==="admin"&&<>
           <div style={{...serif,fontSize:"1.85rem",color:C.gold,marginBottom:5}}>後台管理</div>
           <div style={{color:C.muted,fontSize:".8rem",marginBottom:28,...mono}}>ADMIN PANEL</div>
+          {/* 機器管理 */}
+          <Card title="🤖 機器管理" hint="可新增、編輯機器名稱">
+            <div style={{padding:"18px 22px"}}>
+              <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+                <input placeholder="新機器名稱（如 W6）" id="newMachineName"
+                  style={{flex:1,minWidth:120,background:"rgba(255,255,255,.06)",border:"1px solid rgba(196,122,43,.22)",borderRadius:9,padding:"9px 14px",color:C.cream,...mono,fontSize:".88rem",outline:"none"}}/>
+                <Btn onClick={async()=>{
+                  const nm=document.getElementById("newMachineName").value.trim();
+                  if(!nm){showToast("請輸入機器名稱","error");return;}
+                  if(machines.includes(nm)){showToast("機器名稱已存在","error");return;}
+                  const id="m"+Date.now();
+                  await fbSet(`machines/${id}`,{id,idx:machines.length,name:nm});
+                  document.getElementById("newMachineName").value="";
+                  showToast("✅ 機器已新增","success");
+                }} style={{padding:"9px 18px"}}>+ 新增</Btn>
+              </div>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr>{["編號","機器名稱","操作"].map(h=><th key={h} style={{padding:"9px 14px",textAlign:"left",fontSize:".66rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...mono}}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {machines.map((m,i)=>(
+                    <tr key={m} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
+                      <td style={{padding:"11px 14px",color:C.muted,...mono,fontSize:".75rem"}}>#{i+1}</td>
+                      <td style={{padding:"11px 14px"}}>
+                        {editMachineIdx===i
+                          ? <input value={editMachineName} onChange={e=>setEditMachineName(e.target.value)}
+                              style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(196,122,43,.4)",borderRadius:6,padding:"5px 10px",color:C.cream,...mono,fontSize:".85rem",outline:"none",width:120}}/>
+                          : <strong style={{...mono}}>{m}</strong>
+                        }
+                      </td>
+                      <td style={{padding:"11px 14px"}}><div style={{display:"flex",gap:5}}>
+                        {editMachineIdx===i
+                          ? <>
+                              <SmBtn color="rst" onClick={async()=>{
+                                if(!editMachineName.trim()){showToast("名稱不可空白","error");return;}
+                                // 找到對應 Firebase key
+                                const snap=await new Promise(res=>onValue(ref(db,"machines"),res,{onlyOnce:true}));
+                                const val=snap.val();
+                                const entry=Object.entries(val).find(([k,v])=>v.name===m);
+                                if(entry){await fbSet(`machines/${entry[0]}`,{...entry[1],name:editMachineName.trim()});}
+                                setEditMachineIdx(null);setEditMachineName("");
+                                showToast("✅ 機器名稱已更新","success");
+                              }}>儲存</SmBtn>
+                              <SmBtn color="del" onClick={()=>{setEditMachineIdx(null);setEditMachineName("");}}>取消</SmBtn>
+                            </>
+                          : <>
+                              <SmBtn color="edit" onClick={()=>{setEditMachineIdx(i);setEditMachineName(m);}}>編輯</SmBtn>
+                              <SmBtn color="del" onClick={()=>setModal({title:"刪除機器",body:`確定刪除機器「${m}」？`,okColor:"red",okLabel:"確定刪除",onOk:async()=>{
+                                const snap=await new Promise(res=>onValue(ref(db,"machines"),res,{onlyOnce:true}));
+                                const val=snap.val();
+                                const entry=Object.entries(val).find(([k,v])=>v.name===m);
+                                if(entry)await fbDel(`machines/${entry[0]}`);
+                                showToast("🗑️ 機器已刪除");
+                              }})}>刪除</SmBtn>
+                            </>
+                        }
+                      </div></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
           <div className="grid-2col" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:22}}>
             <div>
               <Card title="🗃️ 物料管理">
