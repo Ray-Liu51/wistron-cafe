@@ -8,6 +8,18 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyCZt9JuKQyrg_7jKXg1ZIqpzUW3Xv-OcY0",
+  authDomain:"wistron-387cafe.firebaseapp.com",
+  projectId:"wistron-387cafe",
+  storageBucket:"wistron-387cafe.firebasestorage.app",
+  messagingSenderId:"439644363376",
+  appId:"1:439644363376:web:64839e8c3a0ec9d0fab2b5",
+  databaseURL:"https://wistron-387cafe-default-rtdb.asia-southeast1.firebasedatabase.app"
+});
+window._db = firebase.database();
+</script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script>
 firebase.initializeApp({
@@ -40,6 +52,7 @@ input,select{font-family:'Noto Serif TC',serif}
 <script type="text/babel">
 const {useState,useEffect,useCallback,useRef}=React;
 const MAX_ATT=5,LOCK_MIN=15,SESS_MIN=120,SALT="WIS387";
+const db=window._db;
 
 async function hp(p){
   const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(SALT+p));
@@ -119,7 +132,6 @@ function PwStr({pass}){
 }
 
 function App(){
-  const db=window._db;
   const [ready,setReady]=useState(false);
   const [screen,setScreen]=useState("login");
   const [page,setPage]=useState("supply");
