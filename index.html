@@ -7,10 +7,10 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script type="module" id="firebase-init">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-  const cfg = {
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+  firebase.initializeApp({
     apiKey:"AIzaSyCZt9JuKQyrg_7jKXg1ZIqpzUW3Xv-OcY0",
     authDomain:"wistron-387cafe.firebaseapp.com",
     projectId:"wistron-387cafe",
@@ -18,8 +18,16 @@
     messagingSenderId:"439644363376",
     appId:"1:439644363376:web:64839e8c3a0ec9d0fab2b5",
     databaseURL:"https://wistron-387cafe-default-rtdb.asia-southeast1.firebasedatabase.app",
+  });
+  const _db = firebase.database();
+  window._fb = {
+    db: _db,
+    ref: (db, path) => path ? _db.ref(path) : _db.ref(db),
+    set: (ref, data) => ref.set(data),
+    onValue: (ref, cb) => { ref.on('value', cb); },
+    push: (ref, data) => ref.push(data),
+    remove: (ref) => ref.remove(),
   };
-  window._fb = { db:getDatabase(initializeApp(cfg)), ref, set, onValue, push, remove };
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet"/>
 <style>
@@ -177,24 +185,24 @@ function App(){
 
   useEffect(()=>{
     // 機器
-    onValue(ref(db,"machines"),snap=>{
+    ref(db,"machines").on('value',snap=>{
       const v=snap.val();
       if(v){
         const arr=Object.entries(v).map(([k,m])=>({...m,fbKey:k})).sort((a,b)=>(a.idx||0)-(b.idx||0));
         setMachines(arr);
       } else {
-        const o={};DEF_MACHINES.forEach((name,i)=>{const k=`m${i+1}`;o[k]={id:k,idx:i,name,fbKey:k};});
-        set(ref(db,"machines"),Object.fromEntries(Object.entries(o).map(([k,v])=>([k,{id:v.id,idx:v.idx,name:v.name}]))));
+        const o={};DEF_MACHINES.forEach((name,i)=>{const k=`m${i+1}`;o[k]={id:k,idx:i,name};});
+        _db.ref("machines").set(o);
       }
     });
     // 物料
-    onValue(ref(db,"items"),snap=>{
+    ref(db,"items").on('value',snap=>{
       const v=snap.val();
       if(v)setItems(Object.values(v));
-      else{const o={};DEF_ITEMS.forEach(i=>{o[i.id]=i;});set(ref(db,"items"),o);}
+      else{const o={};DEF_ITEMS.forEach(i=>{o[i.id]=i;});_db.ref("items").set(o);}
     });
     // 帳號
-    onValue(ref(db,"users"),async snap=>{
+    ref(db,"users").on('value',async snap=>{
       const v=snap.val();
       if(v){setUsers(Object.values(v));}
       else{
@@ -202,21 +210,21 @@ function App(){
         const pw=["admin123","jason123","pass123"];
         const o={};
         for(let i=0;i<defs.length;i++)o[defs[i].id]={...defs[i],pass:await hp(pw[i])};
-        set(ref(db,"users"),o);
+        _db.ref("users").set(o);
       }
       setReady(true);
     });
     // 紀錄
-    onValue(ref(db,"records"),snap=>{
+    ref(db,"records").on('value',snap=>{
       const v=snap.val();
       if(v){const arr=Object.entries(v).map(([k,r])=>({...r,fbKey:k})).sort((a,b)=>new Date(b.time)-new Date(a.time));setRecords(arr.slice(0,200));}
       else setRecords([]);
     });
   },[]);
 
-  const fbs=(path,data)=>set(ref(db,path),data);
-  const fbd=(path)=>remove(ref(db,path));
-  const fbp=(path,data)=>push(ref(db,path),data);
+  const fbs=(path,data)=>_db.ref(path).set(data);
+  const fbd=(path)=>_db.ref(path).remove();
+  const fbp=(path,data)=>_db.ref(path).push(data);
 
   const isAdmin=me?.role==="Super"||me?.role==="Admin";
   const canMgr=(u)=>{
