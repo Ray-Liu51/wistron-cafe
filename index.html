@@ -10,24 +10,16 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
-  firebase.initializeApp({
-    apiKey:"AIzaSyCZt9JuKQyrg_7jKXg1ZIqpzUW3Xv-OcY0",
-    authDomain:"wistron-387cafe.firebaseapp.com",
-    projectId:"wistron-387cafe",
-    storageBucket:"wistron-387cafe.firebasestorage.app",
-    messagingSenderId:"439644363376",
-    appId:"1:439644363376:web:64839e8c3a0ec9d0fab2b5",
-    databaseURL:"https://wistron-387cafe-default-rtdb.asia-southeast1.firebasedatabase.app",
-  });
-  const _db = firebase.database();
-  window._fb = {
-    db: _db,
-    ref: (db, path) => path ? _db.ref(path) : _db.ref(db),
-    set: (ref, data) => ref.set(data),
-    onValue: (ref, cb) => { ref.on('value', cb); },
-    push: (ref, data) => ref.push(data),
-    remove: (ref) => ref.remove(),
-  };
+firebase.initializeApp({
+  apiKey:"AIzaSyCZt9JuKQyrg_7jKXg1ZIqpzUW3Xv-OcY0",
+  authDomain:"wistron-387cafe.firebaseapp.com",
+  projectId:"wistron-387cafe",
+  storageBucket:"wistron-387cafe.firebasestorage.app",
+  messagingSenderId:"439644363376",
+  appId:"1:439644363376:web:64839e8c3a0ec9d0fab2b5",
+  databaseURL:"https://wistron-387cafe-default-rtdb.asia-southeast1.firebasedatabase.app"
+});
+window._db = firebase.database();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet"/>
 <style>
@@ -40,21 +32,8 @@ input,select{font-family:'Noto Serif TC',serif}
 @keyframes loginIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
 .fadeUp{animation:fadeUp .4s ease}
 .loginIn{animation:loginIn .6s ease}
-@media(max-width:1024px) and (min-width:769px){
-  .g2{grid-template-columns:1fr!important}
-  .pad{padding:20px 16px 24px!important}
-  .hidetab{display:none!important}
-}
-@media(max-width:768px){
-  .desknav{display:none!important}
-  .mobnav{display:flex!important}
-  .g2{grid-template-columns:1fr!important}
-  .g4{grid-template-columns:1fr 1fr!important}
-  .pad{padding:14px 10px 80px!important}
-  .hidmob{display:none!important}
-  table{font-size:.74rem}
-  table td,table th{padding:7px 8px!important}
-}
+@media(max-width:1024px) and (min-width:769px){.g2{grid-template-columns:1fr!important}.pad{padding:20px 16px 24px!important}}
+@media(max-width:768px){.desknav{display:none!important}.mobnav{display:flex!important}.g2{grid-template-columns:1fr!important}.g4{grid-template-columns:1fr 1fr!important}.pad{padding:14px 10px 80px!important}.hidmob{display:none!important}table{font-size:.74rem}table td,table th{padding:7px 8px!important}}
 </style>
 </head>
 <body><div id="root"></div>
@@ -74,12 +53,11 @@ const DEF_ITEMS=[
   {id:"i4",name:"攪拌棒",unit:"支",price:2,stock:300,warn:50},
   {id:"i5",name:"紙杯",unit:"個",price:1.5,stock:600,warn:100},
 ];
-const DEF_MACHINES=["W1","W2","W3","W4","W5"];
+const DEF_MACH=["W1","W2","W3","W4","W5"];
 const C={bg:"#1a0f07",roast:"#3b1f0e",gold:"#e8a94a",cream:"#f5ead8",muted:"#8a7260",caramel:"#c47a2b",safe:"#27ae60",warn:"#e67e22",danger:"#c0392b"};
 const M={fontFamily:"'DM Mono',monospace"};
 const S={fontFamily:"'Playfair Display',serif"};
 
-// ── UI 元件 ──
 function Tag({label,type}){
   const t={safe:{bg:"rgba(39,174,96,.15)",c:"#2ecc71",b:"rgba(39,174,96,.3)"},warn:{bg:"rgba(230,126,34,.15)",c:"#e67e22",b:"rgba(230,126,34,.3)"},danger:{bg:"rgba(192,57,43,.15)",c:"#e74c3c",b:"rgba(192,57,43,.3)"}}[type]||{bg:"rgba(255,255,255,.08)",c:"#f5ead8",b:"rgba(255,255,255,.15)"};
   return <span style={{display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:".67rem",...M,background:t.bg,color:t.c,border:`1px solid ${t.b}`}}>{label}</span>;
@@ -134,15 +112,14 @@ function PwStr({pass}){
   const chk=[pass.length>=8,/[A-Z]/.test(pass),/[0-9]/.test(pass),/[^A-Za-z0-9]/.test(pass)];
   const sc=chk.filter(Boolean).length;
   const col=["#e74c3c","#e74c3c","#e67e22","#f1c40f","#2ecc71"][sc];
-  const lbl=["太短","弱","普通","強","非常強"][sc];
   return <div style={{marginTop:5}}>
     <div style={{display:"flex",gap:3,marginBottom:3}}>{chk.map((ok,i)=><div key={i} style={{flex:1,height:3,borderRadius:2,background:i<sc?col:"rgba(255,255,255,.1)"}}/>)}</div>
-    <div style={{fontSize:".66rem",...M,color:col}}>{lbl}：{[pass.length<8?"需8字":"✓8字",!/[A-Z]/.test(pass)?"需大寫":"✓大寫",!/[0-9]/.test(pass)?"需數字":"✓數字",!/[^A-Za-z0-9]/.test(pass)?"建議符號":"✓符號"].join("·")}</div>
+    <div style={{fontSize:".66rem",...M,color:col}}>{["太短","弱","普通","強","非常強"][sc]}：{[pass.length<8?"需8字":"✓8字",!/[A-Z]/.test(pass)?"需大寫":"✓大寫",!/[0-9]/.test(pass)?"需數字":"✓數字",!/[^A-Za-z0-9]/.test(pass)?"建議符號":"✓符號"].join("·")}</div>
   </div>;
 }
 
-// ── 主程式 ──
 function App(){
+  const db=window._db;
   const [ready,setReady]=useState(false);
   const [screen,setScreen]=useState("login");
   const [page,setPage]=useState("supply");
@@ -155,54 +132,37 @@ function App(){
   const [modal,setModal]=useState(null);
   const timer=useRef(null);
 
-  // 登入
   const [lu,setLu]=useState("");const [lp,setLp]=useState("");const [lf,setLf]=useState("B1F");const [le,setLe]=useState("");
   const [att,setAtt]=useState(0);const [lock,setLock]=useState(null);const [slp,setSlp]=useState(false);
-  // 供應
   const [rq,setRq]=useState({});const [rm,setRm]=useState("");const [rn,setRn]=useState("正常");
-  // 物料
   const [iN,setIN]=useState("");const [iU,setIU]=useState("");const [iP,setIP]=useState("");const [iW,setIW]=useState("");const [iS,setIS]=useState("");
-  // 帳號
   const [uN,setUN]=useState("");const [uP,setUP]=useState("");const [uR,setUR]=useState("User");
-  // 補庫
   const [rId,setRId]=useState("");const [rQty,setRQty]=useState("");
-  // 篩選
   const [ff,setFf]=useState("");const [fi,setFi]=useState("");
-  // 密碼修改
   const [po,setPo]=useState("");const [pn,setPn]=useState("");const [pc,setPc]=useState("");
-  // 機器編輯
   const [editMIdx,setEditMIdx]=useState(null);const [editMName,setEditMName]=useState("");const [newMName,setNewMName]=useState("");
 
-  const toast2=useCallback((msg,type="info",dur=3000)=>{setToast({msg,type});setTimeout(()=>setToast({msg:"",type:"info"}),dur);},[]);
-  const {db,ref,set,onValue,push,remove}=window._fb;
+  const t2=useCallback((msg,type="info",dur=3000)=>{setToast({msg,type});setTimeout(()=>setToast({msg:"",type:"info"}),dur);},[]);
 
   const resetTimer=useCallback(()=>{
     if(timer.current)clearTimeout(timer.current);
-    timer.current=setTimeout(()=>{setMe(null);setScreen("login");toast2("⏱️ 閒置逾時已登出","warn");},SESS_MIN*60*1000);
-  },[toast2]);
+    timer.current=setTimeout(()=>{setMe(null);setScreen("login");t2("⏱️ 閒置逾時已登出","warn");},SESS_MIN*60*1000);
+  },[t2]);
 
   useEffect(()=>{if(me)resetTimer();return()=>{if(timer.current)clearTimeout(timer.current);};},[me]);
 
   useEffect(()=>{
-    // 機器
-    ref(db,"machines").on('value',snap=>{
+    db.ref("machines").on("value",snap=>{
       const v=snap.val();
-      if(v){
-        const arr=Object.entries(v).map(([k,m])=>({...m,fbKey:k})).sort((a,b)=>(a.idx||0)-(b.idx||0));
-        setMachines(arr);
-      } else {
-        const o={};DEF_MACHINES.forEach((name,i)=>{const k=`m${i+1}`;o[k]={id:k,idx:i,name};});
-        _db.ref("machines").set(o);
-      }
+      if(v){setMachines(Object.entries(v).map(([k,m])=>({...m,fbKey:k})).sort((a,b)=>(a.idx||0)-(b.idx||0)));}
+      else{const o={};DEF_MACH.forEach((name,i)=>{o[`m${i+1}`]={id:`m${i+1}`,idx:i,name};});db.ref("machines").set(o);}
     });
-    // 物料
-    ref(db,"items").on('value',snap=>{
+    db.ref("items").on("value",snap=>{
       const v=snap.val();
       if(v)setItems(Object.values(v));
-      else{const o={};DEF_ITEMS.forEach(i=>{o[i.id]=i;});_db.ref("items").set(o);}
+      else{const o={};DEF_ITEMS.forEach(i=>{o[i.id]=i;});db.ref("items").set(o);}
     });
-    // 帳號
-    ref(db,"users").on('value',async snap=>{
+    db.ref("users").on("value",async snap=>{
       const v=snap.val();
       if(v){setUsers(Object.values(v));}
       else{
@@ -210,21 +170,20 @@ function App(){
         const pw=["admin123","jason123","pass123"];
         const o={};
         for(let i=0;i<defs.length;i++)o[defs[i].id]={...defs[i],pass:await hp(pw[i])};
-        _db.ref("users").set(o);
+        db.ref("users").set(o);
       }
       setReady(true);
     });
-    // 紀錄
-    ref(db,"records").on('value',snap=>{
+    db.ref("records").on("value",snap=>{
       const v=snap.val();
       if(v){const arr=Object.entries(v).map(([k,r])=>({...r,fbKey:k})).sort((a,b)=>new Date(b.time)-new Date(a.time));setRecords(arr.slice(0,200));}
       else setRecords([]);
     });
   },[]);
 
-  const fbs=(path,data)=>_db.ref(path).set(data);
-  const fbd=(path)=>_db.ref(path).remove();
-  const fbp=(path,data)=>_db.ref(path).push(data);
+  const fbs=(path,data)=>db.ref(path).set(data);
+  const fbd=(path)=>db.ref(path).remove();
+  const fbp=(path,data)=>db.ref(path).push(data);
 
   const isAdmin=me?.role==="Super"||me?.role==="Admin";
   const canMgr=(u)=>{
@@ -235,7 +194,6 @@ function App(){
   const isLocked=lock&&new Date()<lock;
   const machNames=machines.map(m=>m.name);
 
-  // 登入
   const doLogin=async()=>{
     if(isLocked){const l=Math.ceil((lock-new Date())/60000);setLe(`已鎖定，請等 ${l} 分鐘`);return;}
     const h=await hp(lp);
@@ -248,124 +206,117 @@ function App(){
     }
     setAtt(0);setLock(null);setLe("");
     setMe({...u,floor:lf,loginAt:new Date().toISOString()});
-    setPage("supply");setScreen("app");toast2(`歡迎，${u.name}！`,"success");
+    setPage("supply");setScreen("app");t2(`歡迎，${u.name}！`,"success");
   };
   const doLogout=()=>{if(timer.current)clearTimeout(timer.current);setMe(null);setScreen("login");setLu("");setLp("");};
 
-  // 修改密碼
   const changePw=async()=>{
-    if(!po||!pn||!pc){toast2("請填寫所有欄位","error");return;}
-    if(pn!==pc){toast2("新密碼不一致","error");return;}
-    if(pn.length<8){toast2("密碼至少 8 字元","error");return;}
-    if(await hp(po)!==me.pass){toast2("目前密碼錯誤","error");return;}
-    const nh=await hp(pn);
+    if(!po||!pn||!pc){t2("請填寫所有欄位","error");return;}
+    if(pn!==pc){t2("新密碼不一致","error");return;}
+    if(pn.length<8){t2("密碼至少 8 字元","error");return;}
+    if(await hp(po)!==me.pass){t2("目前密碼錯誤","error");return;}
     try{
+      const nh=await hp(pn);
       await fbs(`users/${me.id}`,{id:me.id,name:me.name,role:me.role,pass:nh});
       setMe(prev=>({...prev,pass:nh}));
       setUsers(prev=>prev.map(u=>u.id===me.id?{...u,pass:nh}:u));
-      setPo("");setPn("");setPc("");toast2("✅ 密碼已更新","success");
-    }catch(e){toast2("❌ 更新失敗："+e.message,"error",5000);}
+      setPo("");setPn("");setPc("");t2("✅ 密碼已更新","success");
+    }catch(e){t2("❌ 更新失敗："+e.message,"error",5000);}
   };
 
-  // 備份
   const backup=()=>{
     const d={exportedAt:new Date().toISOString(),by:me.name,items,users:users.map(u=>({...u,pass:"******"})),records};
     const a=document.createElement("a");
     a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:"application/json"}));
     a.download=`coffee_erp_${new Date().toLocaleDateString("zh-TW").replace(/\//g,"-")}.json`;
     document.body.appendChild(a);a.click();document.body.removeChild(a);
-    toast2("📥 備份檔已下載","success");
+    t2("📥 備份檔已下載","success");
   };
 
-  // 領用
   const doReq=async()=>{
     let any=false,errs=[];const upd={};
     items.forEach(item=>{const q=parseInt(rq[item.id])||0;if(q<=0)return;if(q>item.stock){errs.push(`${item.name}庫存不足`);return;}any=true;upd[item.id]={...item,stock:item.stock-q};});
-    if(errs.length){toast2("⚠️ "+errs.join("、"),"error",4000);return;}
-    if(!any){toast2("請輸入至少一項數量","error");return;}
+    if(errs.length){t2("⚠️ "+errs.join("、"),"error",4000);return;}
+    if(!any){t2("請輸入至少一項數量","error");return;}
     const mach=rm||machNames[0]||"";
     for(const item of Object.values(upd))await fbs(`items/${item.id}`,item);
     for(const item of items){const q=parseInt(rq[item.id])||0;if(q<=0)continue;await fbp("records",{time:new Date().toLocaleString("zh-TW"),machine:mach,floor:mach,item:item.name,qty:q,user:me.name,note:rn});}
-    setRq({});setRn("正常");toast2("✅ 領用成功","success");resetTimer();
+    setRq({});setRn("正常");t2("✅ 領用成功","success");resetTimer();
     const low=items.filter(i=>upd[i.id]&&upd[i.id].stock<=i.warn);
-    if(low.length)setTimeout(()=>toast2(`🔔 ${low.map(i=>i.name).join("、")} 庫存偏低！`,"warn",5000),2000);
+    if(low.length)setTimeout(()=>t2(`🔔 ${low.map(i=>i.name).join("、")} 庫存偏低！`,"warn",5000),2000);
   };
 
-  // 物料
   const addItem=async()=>{
-    if(!iN||!iU){toast2("請填寫名稱與單位","error");return;}
+    if(!iN||!iU){t2("請填寫名稱與單位","error");return;}
     const id="i"+Date.now();
     await fbs(`items/${id}`,{id,name:iN,unit:iU,price:parseFloat(iP)||0,stock:parseInt(iS)||0,warn:parseInt(iW)||20});
-    setIN("");setIU("");setIP("");setIW("");setIS("");toast2("✅ 物料已新增","success");
+    setIN("");setIU("");setIP("");setIW("");setIS("");t2("✅ 物料已新增","success");
   };
   const editItem=(it)=>{
     setIN(it.name);setIU(it.unit);setIP(String(it.price));setIW(String(it.warn));setIS(String(it.stock));
-    setModal({title:`編輯：${it.name}`,body:"確認以目前欄位更新此物料？",onOk:async()=>{
+    setModal({title:`編輯：${it.name}`,body:"確認更新？",onOk:async()=>{
       await fbs(`items/${it.id}`,{...it,name:iN||it.name,unit:iU||it.unit,price:parseFloat(iP)||it.price,warn:parseInt(iW)||it.warn,stock:parseInt(iS)||it.stock});
-      setIN("");setIU("");setIP("");setIW("");setIS("");toast2("✅ 已更新","success");
+      setIN("");setIU("");setIP("");setIW("");setIS("");t2("✅ 已更新","success");
     }});
   };
-  const delItem=(it)=>setModal({title:"刪除物料",body:`確定刪除「${it.name}」？`,okRed:true,okLabel:"確定刪除",onOk:async()=>{await fbd(`items/${it.id}`);toast2("🗑️ 已刪除");}});
+  const delItem=(it)=>setModal({title:"刪除物料",body:`確定刪除「${it.name}」？`,okRed:true,okLabel:"確定刪除",onOk:async()=>{await fbd(`items/${it.id}`);t2("🗑️ 已刪除");}});
   const rstItem=(it)=>{
     let q=0;
-    setModal({title:`補庫：${it.name}`,body:<div><div style={{marginBottom:8,color:C.muted,...M,fontSize:".8rem"}}>現有庫存：<strong style={{color:C.gold}}>{it.stock} {it.unit}</strong></div>
+    setModal({title:`補庫：${it.name}`,body:<div><div style={{marginBottom:8,color:C.muted,...M,fontSize:".8rem"}}>現有：<strong style={{color:C.gold}}>{it.stock} {it.unit}</strong></div>
       <input type="number" defaultValue="" onChange={e=>q=parseInt(e.target.value)||0} placeholder="補庫數量"
         style={{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.3)",borderRadius:8,padding:"9px 12px",color:C.cream,...M,outline:"none",fontSize:".9rem"}}/></div>,
-      onOk:async()=>{if(q<=0){toast2("請輸入有效數量","error");return;}await fbs(`items/${it.id}`,{...it,stock:it.stock+q});toast2(`✅ 補庫 ${q} ${it.unit} 成功`,"success");}});
+      onOk:async()=>{if(q<=0){t2("請輸入有效數量","error");return;}await fbs(`items/${it.id}`,{...it,stock:it.stock+q});t2(`✅ 補庫 ${q} ${it.unit} 成功`,"success");}});
   };
   const doRestock=async()=>{
     const q=parseInt(rQty)||0,it=items.find(i=>i.id===rId);
-    if(!it||q<=0){toast2("請選擇物料並輸入數量","error");return;}
-    await fbs(`items/${it.id}`,{...it,stock:it.stock+q});setRQty("");toast2(`✅ ${it.name} 補庫完成`,"success");
+    if(!it||q<=0){t2("請選擇物料並輸入數量","error");return;}
+    await fbs(`items/${it.id}`,{...it,stock:it.stock+q});setRQty("");t2(`✅ ${it.name} 補庫完成`,"success");
   };
 
-  // 帳號
   const addUser=async()=>{
-    if(!isAdmin){toast2("權限不足","error");return;}
+    if(!isAdmin){t2("權限不足","error");return;}
     const tn=uN.trim(),tp=uP.trim();
-    if(!tn||!tp){toast2("請填寫帳號與密碼","error");return;}
-    if(tp.length<8){toast2("密碼至少 8 字元","error");return;}
-    if(users.find(u=>u.name===tn)){toast2("帳號已存在","error");return;}
-    if(me?.role==="Admin"&&uR!=="User"){toast2("Admin 只能新增 User","error");return;}
+    if(!tn||!tp){t2("請填寫帳號與密碼","error");return;}
+    if(tp.length<8){t2("密碼至少 8 字元","error");return;}
+    if(users.find(u=>u.name===tn)){t2("帳號已存在","error");return;}
+    if(me?.role==="Admin"&&uR!=="User"){t2("Admin 只能新增 User","error");return;}
     const id="u"+Date.now();
     await fbs(`users/${id}`,{id,name:tn,pass:await hp(tp),role:uR});
-    setUN("");setUP("");toast2("✅ 帳號已建立","success");
+    setUN("");setUP("");t2("✅ 帳號已建立","success");
   };
   const delUser=(u)=>{
-    if(!canMgr(u)){toast2("權限不足","error");return;}
-    setModal({title:"刪除帳號",body:`確定刪除「${u.name}」？`,okRed:true,okLabel:"確定刪除",onOk:async()=>{await fbd(`users/${u.id}`);toast2("🗑️ 已刪除");}});
+    if(!canMgr(u)){t2("權限不足","error");return;}
+    setModal({title:"刪除帳號",body:`確定刪除「${u.name}」？`,okRed:true,okLabel:"確定刪除",onOk:async()=>{await fbd(`users/${u.id}`);t2("🗑️ 已刪除");}});
   };
   const rstPw=(u)=>{
-    if(!canMgr(u)){toast2("權限不足","error");return;}
+    if(!canMgr(u)){t2("權限不足","error");return;}
     let np="";
     setModal({title:`重設密碼：${u.name}`,body:<div>
       <input type="password" onChange={e=>np=e.target.value} placeholder="新密碼（至少8字元）"
         style={{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.3)",borderRadius:8,padding:"9px 12px",color:C.cream,...M,outline:"none",fontSize:".9rem"}}/></div>,
-      onOk:async()=>{if(np.length<8){toast2("密碼至少 8 字元","error");return;}await fbs(`users/${u.id}`,{...u,pass:await hp(np)});toast2(`✅ ${u.name} 密碼已重設`,"success");}});
+      onOk:async()=>{if(np.length<8){t2("密碼至少 8 字元","error");return;}await fbs(`users/${u.id}`,{...u,pass:await hp(np)});t2(`✅ ${u.name} 密碼已重設`,"success");}});
   };
 
-  // 機器
   const addMachine=async()=>{
     const nm=newMName.trim();
-    if(!nm){toast2("請輸入機器名稱","error");return;}
-    if(machNames.includes(nm)){toast2("機器名稱已存在","error");return;}
+    if(!nm){t2("請輸入機器名稱","error");return;}
+    if(machNames.includes(nm)){t2("機器名稱已存在","error");return;}
     const id="m"+Date.now();
     await fbs(`machines/${id}`,{id,idx:machines.length,name:nm});
-    setNewMName("");toast2("✅ 機器已新增","success");
+    setNewMName("");t2("✅ 機器已新增","success");
   };
   const saveMachine=async(m)=>{
     const nm=editMName.trim();
-    if(!nm){toast2("名稱不可空白","error");return;}
+    if(!nm){t2("名稱不可空白","error");return;}
     await fbs(`machines/${m.fbKey}`,{id:m.id,idx:m.idx,name:nm});
-    setEditMIdx(null);setEditMName("");toast2("✅ 已更新","success");
+    setEditMIdx(null);setEditMName("");t2("✅ 已更新","success");
   };
-  const delMachine=(m)=>setModal({title:"刪除機器",body:`確定刪除「${m.name}」？`,okRed:true,okLabel:"確定刪除",onOk:async()=>{await fbd(`machines/${m.fbKey}`);toast2("🗑️ 已刪除");}});
+  const delMachine=(m)=>setModal({title:"刪除機器",body:`確定刪除「${m.name}」？`,okRed:true,okLabel:"確定刪除",onOk:async()=>{await fbd(`machines/${m.fbKey}`);t2("🗑️ 已刪除");}});
 
   const mCost=()=>{const n=new Date();return records.filter(r=>{const d=new Date(r.time);return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}).reduce((a,r)=>{const i=items.find(x=>x.name===r.item);return a+(i?i.price*r.qty:0);},0).toFixed(0);};
-  const low=items.filter(i=>i.stock<=i.warn).length;
+  const lowCnt=items.filter(i=>i.stock<=i.warn).length;
   const todayR=records.filter(r=>{const d=new Date(r.time),n=new Date();return d.getDate()===n.getDate()&&d.getMonth()===n.getMonth();});
   const filtR=records.filter(r=>(!ff||r.machine===ff)&&(!fi||r.item===fi));
-
   const tabs=[{id:"supply",icon:"📦",label:"供應",always:true},{id:"records",icon:"📋",label:"紀錄",always:true},{id:"admin",icon:"⚙️",label:"管理",always:false},{id:"analytics",icon:"📊",label:"分析",always:false},{id:"profile",icon:"👤",label:"帳號",always:true}].filter(t=>t.always||isAdmin);
 
   if(!ready)return<div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:C.bg,gap:16}}><div style={{...S,fontSize:"2rem",color:C.gold}}>☕ 上班趣 Coffee</div><div style={{color:C.muted,...M,fontSize:".82rem",animation:"blink 1s infinite"}}>連線中...</div></div>;
@@ -378,12 +329,12 @@ function App(){
         <div style={{textAlign:"center",color:C.muted,fontSize:".72rem",marginBottom:28,...M}}>WISTRON ERP · COFFEE INVENTORY</div>
         {isLocked&&<div style={{background:"rgba(192,57,43,.15)",border:"1px solid rgba(192,57,43,.4)",borderRadius:8,padding:"9px 12px",color:"#e74c3c",fontSize:".76rem",...M,marginBottom:14,textAlign:"center"}}>🔒 帳號已鎖定</div>}
         <div style={{marginBottom:14}}>
-          <div style={{fontSize:".68rem",...M,color:C.muted,marginBottom:6,letterSpacing:".08em"}}>帳號</div>
+          <div style={{fontSize:".68rem",...M,color:C.muted,marginBottom:6}}>帳號</div>
           <input type="text" value={lu} onChange={e=>setLu(e.target.value)} placeholder="輸入帳號" disabled={isLocked} onKeyDown={e=>e.key==="Enter"&&!isLocked&&doLogin()}
             style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:9,padding:"11px 14px",color:C.cream,fontSize:".92rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}}/>
         </div>
         <div style={{marginBottom:14}}>
-          <div style={{fontSize:".68rem",...M,color:C.muted,marginBottom:6,letterSpacing:".08em"}}>密碼</div>
+          <div style={{fontSize:".68rem",...M,color:C.muted,marginBottom:6}}>密碼</div>
           <div style={{position:"relative"}}>
             <input type={slp?"text":"password"} value={lp} onChange={e=>setLp(e.target.value)} placeholder="輸入密碼" disabled={isLocked} onKeyDown={e=>e.key==="Enter"&&!isLocked&&doLogin()}
               style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:9,padding:"11px 38px 11px 14px",color:C.cream,fontSize:".92rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}}/>
@@ -391,14 +342,14 @@ function App(){
           </div>
         </div>
         <div style={{marginBottom:22}}>
-          <div style={{fontSize:".68rem",...M,color:C.muted,marginBottom:6,letterSpacing:".08em"}}>所在樓層</div>
+          <div style={{fontSize:".68rem",...M,color:C.muted,marginBottom:6}}>所在樓層</div>
           <select value={lf} onChange={e=>setLf(e.target.value)} style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:9,padding:"11px 14px",color:C.cream,fontSize:".9rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}}>
             {["B1F","1F","2F","3F"].map(f=><option key={f} style={{background:C.roast}}>{f}</option>)}
           </select>
         </div>
-        <Btn onClick={doLogin} disabled={isLocked} style={{width:"100%",padding:"13px",borderRadius:10,fontSize:".95rem",boxShadow:"0 4px 18px rgba(196,122,43,.3)"}}>登入系統</Btn>
+        <Btn onClick={doLogin} disabled={isLocked} style={{width:"100%",padding:"13px",borderRadius:10,fontSize:".95rem"}}>登入系統</Btn>
         {le&&<div style={{color:"#e74c3c",fontSize:".76rem",textAlign:"center",marginTop:10,...M}}>{le}</div>}
-        <div style={{textAlign:"center",marginTop:16,color:C.muted,fontSize:".67rem",...M}}>🔐 加密儲存 · ⏱️ {SESS_MIN}分自動登出 · 🔒 {MAX_ATT}次失敗鎖定</div>
+        <div style={{textAlign:"center",marginTop:16,color:C.muted,fontSize:".67rem",...M}}>🔐 加密·⏱️{SESS_MIN}分自動登出·🔒{MAX_ATT}次失敗鎖定</div>
       </div>
     </div>
   );
@@ -417,7 +368,6 @@ function App(){
   );
 
   return <>
-    {/* 頂部導覽 */}
     <nav style={{position:"sticky",top:0,zIndex:50,background:"rgba(26,15,7,.94)",backdropFilter:"blur(16px)",borderBottom:"1px solid rgba(196,122,43,.2)",display:"flex",alignItems:"center",padding:"0 14px",height:56,gap:3}}>
       <div style={{...S,fontWeight:900,fontSize:"1rem",color:C.gold,marginRight:"auto",whiteSpace:"nowrap"}}>☕ 上班趣 <span style={{color:C.muted,fontWeight:400,fontSize:".6rem",...M,marginLeft:4}}>⚡</span></div>
       <div className="desknav" style={{display:"flex",gap:2}}>
@@ -430,7 +380,6 @@ function App(){
       </div>
     </nav>
 
-    {/* 手機底部導覽 */}
     <div className="mobnav" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,zIndex:50,background:"rgba(26,15,7,.97)",borderTop:"1px solid rgba(196,122,43,.22)",padding:"5px 0 6px",justifyContent:"space-around"}}>
       {tabs.map(t=><div key={t.id} onClick={()=>setPage(t.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,cursor:"pointer",padding:"3px 8px",borderRadius:7,background:page===t.id?"rgba(196,122,43,.1)":"transparent",minWidth:46}}>
         <span style={{fontSize:"1.15rem"}}>{t.icon}</span>
@@ -440,12 +389,11 @@ function App(){
 
     <div className="pad fadeUp" style={{padding:"22px 20px 80px",maxWidth:1200,margin:"0 auto"}} onClick={resetTimer}>
 
-      {/* 物料供應 */}
       {page==="supply"&&<>
         <div style={{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}}>物料供應台</div>
         <div style={{color:C.muted,fontSize:".76rem",marginBottom:22,...M}}>MATERIAL SUPPLY · 即時雲端庫存</div>
         <div className="g4" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
-          {[{icon:"📦",label:"低庫存警示",val:low,unit:"項",accent:low>0?"#e74c3c":C.safe},{icon:"✅",label:"庫存正常",val:items.length-low,unit:"項",accent:C.safe},{icon:"📋",label:"今日領用",val:todayR.length,unit:"筆",accent:C.cream},{icon:"💰",label:"本月成本",val:mCost(),unit:"元",accent:C.cream}].map(s=>(
+          {[{icon:"📦",label:"低庫存警示",val:lowCnt,unit:"項",accent:lowCnt>0?"#e74c3c":C.safe},{icon:"✅",label:"庫存正常",val:items.length-lowCnt,unit:"項",accent:C.safe},{icon:"📋",label:"今日領用",val:todayR.length,unit:"筆",accent:C.cream},{icon:"💰",label:"本月成本",val:mCost(),unit:"元",accent:C.cream}].map(s=>(
             <div key={s.label} style={{background:"linear-gradient(145deg,rgba(59,31,14,.8),rgba(26,15,7,.6))",border:"1px solid rgba(196,122,43,.18)",borderRadius:12,padding:"14px 14px 10px",position:"relative"}}>
               <div style={{position:"absolute",right:10,top:8,fontSize:"1.2rem",opacity:.25}}>{s.icon}</div>
               <div style={{fontSize:".64rem",color:C.muted,...M}}>{s.label}</div>
@@ -454,7 +402,7 @@ function App(){
             </div>
           ))}
         </div>
-        <Card title="📦 現有庫存" hint="Firebase 即時同步">
+        <Card title="📦 現有庫存" hint="即時同步">
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead><tr>{["物料","庫存","狀態","警戒","單價"].map(h=><th key={h} style={{padding:"10px 14px",textAlign:"left",fontSize:".66rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...M}}>{h}</th>)}</tr></thead>
             <tbody>{items.map(item=>{const pct=Math.min(100,Math.round(item.stock/(item.warn*5)*100));return(
@@ -494,7 +442,6 @@ function App(){
         </Card>
       </>}
 
-      {/* 領用紀錄 */}
       {page==="records"&&<>
         <div style={{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}}>領用紀錄</div>
         <div style={{color:C.muted,fontSize:".76rem",marginBottom:22,...M}}>USAGE RECORDS</div>
@@ -528,13 +475,10 @@ function App(){
         </Card>
       </>}
 
-      {/* 後台管理 */}
       {page==="admin"&&<>
         <div style={{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}}>後台管理</div>
         <div style={{color:C.muted,fontSize:".76rem",marginBottom:22,...M}}>ADMIN PANEL</div>
-
-        {/* 機器管理 */}
-        <Card title="🤖 機器管理" hint="新增 / 編輯 / 刪除">
+        <Card title="🤖 機器管理" hint="新增/編輯/刪除">
           <div style={{padding:"16px 18px"}}>
             <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
               <input value={newMName} onChange={e=>setNewMName(e.target.value)} placeholder="新機器名稱（如 W6）"
@@ -542,29 +486,21 @@ function App(){
               <Btn onClick={addMachine} style={{padding:"8px 16px"}}>+ 新增</Btn>
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr>{["#","機器名稱","操作"].map(h=><th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:".65rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...M}}>{h}</th>)}</tr></thead>
+              <thead><tr>{["#","名稱","操作"].map(h=><th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:".65rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...M}}>{h}</th>)}</tr></thead>
               <tbody>{machines.map((m,i)=>(
                 <tr key={m.fbKey||i} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
                   <td style={{padding:"10px 12px",color:C.muted,...M,fontSize:".72rem"}}>#{i+1}</td>
-                  <td style={{padding:"10px 12px"}}>
-                    {editMIdx===i
-                      ?<input value={editMName} onChange={e=>setEditMName(e.target.value)}
-                          style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(196,122,43,.4)",borderRadius:6,padding:"5px 9px",color:C.cream,...M,fontSize:".84rem",outline:"none",width:100}}/>
-                      :<strong style={{...M}}>{m.name}</strong>}
-                  </td>
+                  <td style={{padding:"10px 12px"}}>{editMIdx===i?<input value={editMName} onChange={e=>setEditMName(e.target.value)} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(196,122,43,.4)",borderRadius:6,padding:"5px 9px",color:C.cream,...M,fontSize:".84rem",outline:"none",width:100}}/>:<strong style={{...M}}>{m.name}</strong>}</td>
                   <td style={{padding:"10px 12px"}}><div style={{display:"flex",gap:5}}>
-                    {editMIdx===i
-                      ?<><SBtn c="green" onClick={()=>saveMachine(m)}>儲存</SBtn><SBtn c="red" onClick={()=>{setEditMIdx(null);setEditMName("");}}>取消</SBtn></>
-                      :<><SBtn c="edit" onClick={()=>{setEditMIdx(i);setEditMName(m.name);}}>編輯</SBtn><SBtn c="red" onClick={()=>delMachine(m)}>刪除</SBtn></>}
+                    {editMIdx===i?<><SBtn c="green" onClick={()=>saveMachine(m)}>儲存</SBtn><SBtn c="red" onClick={()=>{setEditMIdx(null);setEditMName("");}}>取消</SBtn></>
+                    :<><SBtn c="edit" onClick={()=>{setEditMIdx(i);setEditMName(m.name);}}>編輯</SBtn><SBtn c="red" onClick={()=>delMachine(m)}>刪除</SBtn></>}
                   </div></td>
                 </tr>
               ))}</tbody>
             </table>
           </div>
         </Card>
-
         <div className="g2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
-          {/* 物料管理 */}
           <div>
             <Card title="🗃️ 物料管理">
               <div style={{padding:"16px 18px",display:"flex",flexDirection:"column",gap:10}}>
@@ -590,10 +526,8 @@ function App(){
               </table>
             </Card>
           </div>
-
-          {/* 帳號 + 補庫 */}
           <div>
-            <Card title="👤 帳號管理" hint={me?.role==="Admin"?"可管理User":"Super可管理所有"}>
+            <Card title="👤 帳號管理">
               <div style={{padding:"16px 18px",display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
                   <div><div style={{fontSize:".68rem",color:C.muted,...M,marginBottom:4}}>帳號</div><Inp value={uN} onChange={setUN} placeholder="帳號"/></div>
@@ -623,7 +557,6 @@ function App(){
                 ))}</tbody>
               </table>
             </Card>
-
             <Card title="🚚 進貨補庫" style={{marginBottom:0}}>
               <div style={{padding:"16px 18px",display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
@@ -645,7 +578,6 @@ function App(){
         </div>
       </>}
 
-      {/* 成本分析 */}
       {page==="analytics"&&<>
         <div style={{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}}>成本分析</div>
         <div style={{color:C.muted,fontSize:".76rem",marginBottom:22,...M}}>COST ANALYTICS</div>
@@ -661,43 +593,23 @@ function App(){
             </div>;
           })}
         </div>
-        <Card title="📈 物料消耗排行">
-          {(()=>{
-            const cs=items.map(it=>{const tq=records.filter(r=>r.item===it.name).reduce((a,r)=>a+r.qty,0);return{...it,tq,tc:tq*it.price};}).sort((a,b)=>b.tc-a.tc);
-            const gt=cs.reduce((a,i)=>a+i.tc,0)||1;
-            return <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr>{["物料","總領用","單位","總成本","佔比"].map(h=><th key={h} style={{padding:"9px 14px",textAlign:"left",fontSize:".66rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...M}}>{h}</th>)}</tr></thead>
-              <tbody>{cs.map(it=>{const pct=((it.tc/gt)*100).toFixed(1);return(
-                <tr key={it.id} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
-                  <td style={{padding:"10px 14px"}}>{it.name}</td>
-                  <td style={{padding:"10px 14px",...M,color:C.gold}}>{it.tq.toLocaleString()}</td>
-                  <td style={{padding:"10px 14px",color:C.muted}}>{it.unit}</td>
-                  <td style={{padding:"10px 14px",...M,color:C.caramel}}>${it.tc.toFixed(0)}</td>
-                  <td style={{padding:"10px 14px"}}><div style={{display:"flex",alignItems:"center",gap:7}}><span style={{...M,fontSize:".7rem",color:C.muted,width:34}}>{pct}%</span><div style={{flex:1,height:4,background:"rgba(255,255,255,.08)",borderRadius:2,overflow:"hidden",minWidth:60}}><div style={{width:`${pct}%`,height:"100%",background:`linear-gradient(90deg,${C.warn},#f39c12)`,borderRadius:2}}/></div></div></td>
-                </tr>
-              );})}</tbody>
-            </table>;
-          })()}
-        </Card>
       </>}
 
-      {/* 我的帳號 */}
       {page==="profile"&&<>
         <div style={{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}}>我的帳號</div>
-        <div style={{color:C.muted,fontSize:".76rem",marginBottom:22,...M}}>PROFILE · 個人資料與密碼管理</div>
+        <div style={{color:C.muted,fontSize:".76rem",marginBottom:22,...M}}>PROFILE</div>
         <Card title="💾 資料備份" hint="建議每月備份">
-          <div style={{padding:"18px 18px",display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:12}}>
             <div style={{background:"rgba(255,255,255,.04)",borderRadius:9,padding:"12px 14px",fontSize:".8rem",color:C.muted,lineHeight:1.9,...M}}>
-              <div>📦 物料：<strong style={{color:C.cream}}>{items.length} 項</strong> &nbsp;📋 紀錄：<strong style={{color:C.cream}}>{records.length} 筆</strong> &nbsp;👤 帳號：<strong style={{color:C.cream}}>{users.length} 個</strong></div>
-              <div style={{fontSize:".68rem",marginTop:4}}>⚠️ 備份檔中密碼已遮蔽</div>
+              📦 物料：<strong style={{color:C.cream}}>{items.length}項</strong> &nbsp;📋 紀錄：<strong style={{color:C.cream}}>{records.length}筆</strong> &nbsp;👤 帳號：<strong style={{color:C.cream}}>{users.length}個</strong>
             </div>
-            <Btn onClick={backup} color="green" style={{padding:"11px"}}>📥 立即下載備份檔（JSON）</Btn>
+            <Btn onClick={backup} color="green" style={{padding:"11px"}}>📥 立即下載備份檔</Btn>
           </div>
         </Card>
         <div className="g2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
           <Card title="📋 帳號資訊">
             <div style={{padding:"18px"}}>
-              {[["帳號",me?.name],["權限",me?.role],["樓層",me?.floor],["登入時間",me?.loginAt?new Date(me.loginAt).toLocaleString("zh-TW"):"—"],["自動登出",`${SESS_MIN}分鐘閒置`]].map(([l,v])=>(
+              {[["帳號",me?.name],["權限",me?.role],["樓層",me?.floor],["登入時間",me?.loginAt?new Date(me.loginAt).toLocaleString("zh-TW"):"—"],["自動登出",`${SESS_MIN}分鐘`]].map(([l,v])=>(
                 <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
                   <span style={{fontSize:".78rem",color:C.muted,...M}}>{l}</span>
                   <span style={{fontSize:".84rem",color:C.cream,...M}}>{v}</span>
