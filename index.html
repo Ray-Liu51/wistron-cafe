@@ -4,32 +4,19 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>☕ 上班趣 Coffee ERP</title>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
 firebase.initializeApp({
   apiKey:"AIzaSyCZt9JuKQyrg_7jKXg1ZIqpzUW3Xv-OcY0",
   authDomain:"wistron-387cafe.firebaseapp.com",
+  databaseURL:"https://wistron-387cafe-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId:"wistron-387cafe",
   storageBucket:"wistron-387cafe.firebasestorage.app",
   messagingSenderId:"439644363376",
-  appId:"1:439644363376:web:64839e8c3a0ec9d0fab2b5",
-  databaseURL:"https://wistron-387cafe-default-rtdb.asia-southeast1.firebasedatabase.app"
-});
-window._db = firebase.database();
-</script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script>
-firebase.initializeApp({
-  apiKey:"AIzaSyCZt9JuKQyrg_7jKXg1ZIqpzUW3Xv-OcY0",
-  authDomain:"wistron-387cafe.firebaseapp.com",
-  projectId:"wistron-387cafe",
-  storageBucket:"wistron-387cafe.firebasestorage.app",
-  messagingSenderId:"439644363376",
-  appId:"1:439644363376:web:64839e8c3a0ec9d0fab2b5",
-  databaseURL:"https://wistron-387cafe-default-rtdb.asia-southeast1.firebasedatabase.app"
+  appId:"1:439644363376:web:64839e8c3a0ec9d0fab2b5"
 });
 window._db = firebase.database();
 </script>
@@ -37,26 +24,48 @@ window._db = firebase.database();
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body,#root{min-height:100vh;font-family:'Noto Serif TC',serif;background:#1a0f07;color:#f5ead8}
-input,select{font-family:'Noto Serif TC',serif}
+input,select{font-family:'Noto Serif TC',serif;box-sizing:border-box}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:rgba(196,122,43,.4);border-radius:3px}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-@keyframes loginIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
 .fadeUp{animation:fadeUp .4s ease}
-.loginIn{animation:loginIn .6s ease}
-@media(max-width:1024px) and (min-width:769px){.g2{grid-template-columns:1fr!important}.pad{padding:20px 16px 24px!important}}
-@media(max-width:768px){.desknav{display:none!important}.mobnav{display:flex!important}.g2{grid-template-columns:1fr!important}.g4{grid-template-columns:1fr 1fr!important}.pad{padding:14px 10px 80px!important}.hidmob{display:none!important}table{font-size:.74rem}table td,table th{padding:7px 8px!important}}
+@media(max-width:768px){
+  .desknav{display:none!important}
+  .mobnav{display:flex!important}
+  .g2{grid-template-columns:1fr!important}
+  .g4{grid-template-columns:1fr 1fr!important}
+  .pad{padding:14px 10px 80px!important}
+  .hidmob{display:none!important}
+  table{font-size:.74rem}
+  table td,table th{padding:7px 8px!important}
+}
+@media(max-width:1024px) and (min-width:769px){
+  .g2{grid-template-columns:1fr!important}
+  .pad{padding:20px 16px 24px!important}
+}
 </style>
 </head>
-<body><div id="root"></div>
-<script type="text/babel">
-const {useState,useEffect,useCallback,useRef}=React;
-const MAX_ATT=5,LOCK_MIN=15,SESS_MIN=120,SALT="WIS387";
-const db=window._db;
+<body>
+<div id="root"></div>
+<script>
+// ── 常數 ──
+const MAX_ATT=5, LOCK_MIN=15, SESS_MIN=120, SALT="WIS387";
+const db = window._db;
+const {createElement:h, useState, useEffect, useCallback, useRef, Fragment} = React;
 
-async function hp(p){
-  const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(SALT+p));
-  return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("");
+// ── 顏色 ──
+const C = {
+  bg:"#1a0f07", roast:"#3b1f0e", gold:"#e8a94a", cream:"#f5ead8",
+  muted:"#8a7260", caramel:"#c47a2b", safe:"#27ae60", warn:"#e67e22", danger:"#c0392b"
+};
+const M = {fontFamily:"'DM Mono',monospace"};
+const S = {fontFamily:"'Playfair Display',serif"};
+
+// ── 工具 ──
+async function hashPass(p){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(SALT+p));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
 const DEF_ITEMS=[
@@ -66,71 +75,99 @@ const DEF_ITEMS=[
   {id:"i4",name:"攪拌棒",unit:"支",price:2,stock:300,warn:50},
   {id:"i5",name:"紙杯",unit:"個",price:1.5,stock:600,warn:100},
 ];
-const DEF_MACH=["W1","W2","W3","W4","W5"];
-const C={bg:"#1a0f07",roast:"#3b1f0e",gold:"#e8a94a",cream:"#f5ead8",muted:"#8a7260",caramel:"#c47a2b",safe:"#27ae60",warn:"#e67e22",danger:"#c0392b"};
-const M={fontFamily:"'DM Mono',monospace"};
-const S={fontFamily:"'Playfair Display',serif"};
+const DEF_MACH = ["W1","W2","W3","W4","W5"];
 
-function Tag({label,type}){
-  const t={safe:{bg:"rgba(39,174,96,.15)",c:"#2ecc71",b:"rgba(39,174,96,.3)"},warn:{bg:"rgba(230,126,34,.15)",c:"#e67e22",b:"rgba(230,126,34,.3)"},danger:{bg:"rgba(192,57,43,.15)",c:"#e74c3c",b:"rgba(192,57,43,.3)"}}[type]||{bg:"rgba(255,255,255,.08)",c:"#f5ead8",b:"rgba(255,255,255,.15)"};
-  return <span style={{display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:".67rem",...M,background:t.bg,color:t.c,border:`1px solid ${t.b}`}}>{label}</span>;
+// ── 小元件（用 h() 代替 JSX）──
+function el(tag, props, ...children){ return h(tag, props, ...children); }
+
+function Tag({label, type}){
+  const t = {
+    safe:{bg:"rgba(39,174,96,.15)",c:"#2ecc71",b:"rgba(39,174,96,.3)"},
+    warn:{bg:"rgba(230,126,34,.15)",c:"#e67e22",b:"rgba(230,126,34,.3)"},
+    danger:{bg:"rgba(192,57,43,.15)",c:"#e74c3c",b:"rgba(192,57,43,.3)"}
+  }[type] || {bg:"rgba(255,255,255,.08)",c:"#f5ead8",b:"rgba(255,255,255,.15)"};
+  return el("span",{style:{display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:".67rem",...M,background:t.bg,color:t.c,border:`1px solid ${t.b}`}},label);
 }
+
 function Bar({pct}){
-  const g=pct>40?`linear-gradient(90deg,${C.safe},#2ecc71)`:pct>20?`linear-gradient(90deg,${C.warn},#f39c12)`:`linear-gradient(90deg,${C.danger},#e74c3c)`;
-  return <div style={{flex:1,height:5,background:"rgba(255,255,255,.08)",borderRadius:3,overflow:"hidden",minWidth:50}}><div style={{width:`${pct}%`,height:"100%",background:g,borderRadius:3,transition:"width .5s"}}/></div>;
+  const g = pct>40?`linear-gradient(90deg,${C.safe},#2ecc71)`:pct>20?`linear-gradient(90deg,${C.warn},#f39c12)`:`linear-gradient(90deg,${C.danger},#e74c3c)`;
+  return el("div",{style:{flex:1,height:5,background:"rgba(255,255,255,.08)",borderRadius:3,overflow:"hidden",minWidth:50}},
+    el("div",{style:{width:`${pct}%`,height:"100%",background:g,borderRadius:3,transition:"width .5s"}}));
 }
+
 function Card({title,hint,children,style}){
-  return <div style={{background:"linear-gradient(145deg,rgba(59,31,14,.65),rgba(26,15,7,.5))",border:"1px solid rgba(196,122,43,.18)",borderRadius:14,overflow:"hidden",marginBottom:20,...style}}>
-    {(title||hint)&&<div style={{padding:"14px 18px 12px",borderBottom:"1px solid rgba(196,122,43,.1)",display:"flex",alignItems:"center",justifyContent:"space-between"}}><span style={{fontSize:".9rem",fontWeight:600,color:C.cream}}>{title}</span><span style={{fontSize:".68rem",color:C.muted,...M}}>{hint}</span></div>}
-    {children}
-  </div>;
+  return el("div",{style:{background:"linear-gradient(145deg,rgba(59,31,14,.65),rgba(26,15,7,.5))",border:"1px solid rgba(196,122,43,.18)",borderRadius:14,overflow:"hidden",marginBottom:20,...style}},
+    (title||hint) && el("div",{style:{padding:"14px 18px 12px",borderBottom:"1px solid rgba(196,122,43,.1)",display:"flex",alignItems:"center",justifyContent:"space-between"}},
+      el("span",{style:{fontSize:".9rem",fontWeight:600,color:C.cream}},title),
+      el("span",{style:{fontSize:".68rem",color:C.muted,...M}},hint)
+    ),
+    children
+  );
 }
-function Inp({value,onChange,placeholder,type="text",disabled,style}){
-  const [show,setShow]=useState(false);
-  const isP=type==="password";
-  return <div style={{position:"relative"}}>
-    <input type={isP?(show?"text":"password"):type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} disabled={disabled}
-      style={{width:"100%",background:disabled?"rgba(255,255,255,.03)":"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.22)",borderRadius:9,padding:isP?"10px 38px 10px 12px":"10px 12px",color:C.cream,fontSize:".88rem",outline:"none",...M,...style}}/>
-    {isP&&<button type="button" onClick={()=>setShow(s=>!s)} style={{position:"absolute",right:9,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:".95rem"}}>{show?"🙈":"👁️"}</button>}
-  </div>;
+
+function PwInp({value,onChange,placeholder,disabled}){
+  const [show,setShow] = useState(false);
+  return el("div",{style:{position:"relative"}},
+    el("input",{type:show?"text":"password",value,onChange:e=>onChange(e.target.value),placeholder,disabled,
+      style:{width:"100%",background:disabled?"rgba(255,255,255,.03)":"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.22)",borderRadius:9,padding:"10px 38px 10px 12px",color:C.cream,fontSize:".88rem",outline:"none",...M}}),
+    el("button",{type:"button",onClick:()=>setShow(s=>!s),style:{position:"absolute",right:9,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:".95rem"}},show?"🙈":"👁️")
+  );
 }
-function Btn({onClick,children,color="gold",style,disabled}){
-  const bg={gold:`linear-gradient(135deg,${C.caramel},${C.gold})`,green:"linear-gradient(135deg,#27ae60,#2ecc71)",red:`linear-gradient(135deg,${C.danger},#e74c3c)`,ghost:"rgba(255,255,255,.06)"}[color];
-  const tc=color==="gold"?C.bg:color==="ghost"?C.cream:"#fff";
-  return <button onClick={onClick} disabled={disabled} style={{padding:"9px 18px",background:disabled?"rgba(255,255,255,.05)":bg,border:color==="ghost"?"1px solid rgba(255,255,255,.12)":"none",borderRadius:8,color:disabled?C.muted:tc,fontWeight:700,fontSize:".84rem",cursor:disabled?"not-allowed":"pointer",fontFamily:"'Noto Serif TC',serif",opacity:disabled?.6:1,...style}}>{children}</button>;
+
+function numInp(value,onChange,placeholder){
+  return el("input",{type:"number",value,onChange:e=>onChange(e.target.value),placeholder,
+    style:{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"9px 12px",color:C.cream,fontSize:".9rem",outline:"none",...M}});
 }
-function SBtn({onClick,children,c="edit"}){
-  const m={edit:{bg:"rgba(196,122,43,.1)",b:"rgba(196,122,43,.4)",c:C.gold},green:{bg:"rgba(39,174,96,.1)",b:"rgba(39,174,96,.4)",c:"#2ecc71"},red:{bg:"rgba(192,57,43,.1)",b:"rgba(192,57,43,.4)",c:"#e74c3c"},blue:{bg:"rgba(52,152,219,.1)",b:"rgba(52,152,219,.4)",c:"#3498db"}}[c];
-  return <button onClick={onClick} style={{padding:"4px 10px",background:m.bg,border:`1px solid ${m.b}`,borderRadius:6,color:m.c,fontSize:".7rem",cursor:"pointer",...M}}>{children}</button>;
+function txtInp(value,onChange,placeholder){
+  return el("input",{type:"text",value,onChange:e=>onChange(e.target.value),placeholder,
+    style:{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"9px 12px",color:C.cream,fontSize:".9rem",outline:"none",...M}});
 }
+
+function Btn({onClick,children,color,style,disabled}){
+  const bg={gold:`linear-gradient(135deg,${C.caramel},${C.gold})`,green:"linear-gradient(135deg,#27ae60,#2ecc71)",red:`linear-gradient(135deg,${C.danger},#e74c3c)`}[color||"gold"];
+  return el("button",{onClick,disabled,style:{padding:"9px 18px",background:disabled?"rgba(255,255,255,.05)":bg,border:"none",borderRadius:8,color:color==="gold"?C.bg:"#fff",fontWeight:700,fontSize:".84rem",cursor:disabled?"not-allowed":"pointer",fontFamily:"'Noto Serif TC',serif",...style}},children);
+}
+
+function SBtn({onClick,children,c}){
+  const m={edit:{bg:"rgba(196,122,43,.1)",b:"rgba(196,122,43,.4)",c:C.gold},green:{bg:"rgba(39,174,96,.1)",b:"rgba(39,174,96,.4)",c:"#2ecc71"},red:{bg:"rgba(192,57,43,.1)",b:"rgba(192,57,43,.4)",c:"#e74c3c"},blue:{bg:"rgba(52,152,219,.1)",b:"rgba(52,152,219,.4)",c:"#3498db"}}[c||"edit"];
+  return el("button",{onClick,style:{padding:"4px 10px",background:m.bg,border:`1px solid ${m.b}`,borderRadius:6,color:m.c,fontSize:".7rem",cursor:"pointer",...M}},children);
+}
+
 function Toast({msg,type}){
-  const bg=type==="error"?"rgba(192,57,43,.95)":type==="success"?"rgba(39,130,60,.95)":C.roast;
-  return <div style={{position:"fixed",bottom:72,right:16,zIndex:300,background:bg,border:`1px solid ${C.caramel}`,borderRadius:12,padding:"12px 18px",color:C.cream,fontSize:".85rem",maxWidth:300,opacity:msg?1:0,transform:msg?"translateY(0)":"translateY(12px)",transition:"all .3s",pointerEvents:"none",...M}}>{msg}</div>;
+  const bg = type==="error"?"rgba(192,57,43,.95)":type==="success"?"rgba(39,130,60,.95)":C.roast;
+  return el("div",{style:{position:"fixed",bottom:72,right:16,zIndex:300,background:bg,border:`1px solid ${C.caramel}`,borderRadius:12,padding:"12px 18px",color:C.cream,fontSize:".85rem",maxWidth:300,opacity:msg?1:0,transform:msg?"translateY(0)":"translateY(12px)",transition:"all .3s",pointerEvents:"none",...M}},msg);
 }
-function Modal({title,body,onOk,onClose,okLabel="確認",okRed}){
-  if(!title)return null;
-  return <div onClick={e=>{if(e.target===e.currentTarget)onClose();}} style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,.75)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-    <div style={{background:`linear-gradient(145deg,${C.roast},#1e0e06)`,border:"1px solid rgba(196,122,43,.35)",borderRadius:14,padding:24,width:"min(460px,100%)",boxShadow:"0 20px 60px rgba(0,0,0,.7)"}}>
-      <div style={{...S,fontSize:"1.1rem",color:C.gold,marginBottom:12}}>{title}</div>
-      <div style={{color:C.muted,fontSize:".85rem",lineHeight:1.7,marginBottom:16}}>{body}</div>
-      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-        <button onClick={onClose} style={{padding:"8px 16px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",borderRadius:7,color:C.muted,cursor:"pointer",...M,fontSize:".78rem"}}>取消</button>
-        <button onClick={onOk} style={{padding:"8px 16px",background:okRed?`linear-gradient(135deg,${C.danger},#e74c3c)`:`linear-gradient(135deg,${C.caramel},${C.gold})`,border:"none",borderRadius:7,color:okRed?"#fff":C.bg,fontWeight:700,cursor:"pointer",...M,fontSize:".78rem"}}>{okLabel}</button>
-      </div>
-    </div>
-  </div>;
+
+function Modal({title,body,onOk,onClose,okLabel,okRed}){
+  if(!title) return null;
+  return el("div",{onClick:e=>{if(e.target===e.currentTarget)onClose();},style:{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,.75)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}},
+    el("div",{style:{background:`linear-gradient(145deg,${C.roast},#1e0e06)`,border:"1px solid rgba(196,122,43,.35)",borderRadius:14,padding:24,width:"min(460px,100%)",boxShadow:"0 20px 60px rgba(0,0,0,.7)"}},
+      el("div",{style:{...S,fontSize:"1.1rem",color:C.gold,marginBottom:12}},title),
+      el("div",{style:{color:C.muted,fontSize:".85rem",lineHeight:1.7,marginBottom:16}},body),
+      el("div",{style:{display:"flex",gap:10,justifyContent:"flex-end"}},
+        el("button",{onClick:onClose,style:{padding:"8px 16px",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",borderRadius:7,color:C.muted,cursor:"pointer",...M,fontSize:".78rem"}},"取消"),
+        el("button",{onClick:onOk,style:{padding:"8px 16px",background:okRed?`linear-gradient(135deg,${C.danger},#e74c3c)`:`linear-gradient(135deg,${C.caramel},${C.gold})`,border:"none",borderRadius:7,color:okRed?"#fff":C.bg,fontWeight:700,cursor:"pointer",...M,fontSize:".78rem"}},okLabel||"確認")
+      )
+    )
+  );
 }
+
 function PwStr({pass}){
-  if(!pass)return null;
+  if(!pass) return null;
   const chk=[pass.length>=8,/[A-Z]/.test(pass),/[0-9]/.test(pass),/[^A-Za-z0-9]/.test(pass)];
   const sc=chk.filter(Boolean).length;
   const col=["#e74c3c","#e74c3c","#e67e22","#f1c40f","#2ecc71"][sc];
-  return <div style={{marginTop:5}}>
-    <div style={{display:"flex",gap:3,marginBottom:3}}>{chk.map((ok,i)=><div key={i} style={{flex:1,height:3,borderRadius:2,background:i<sc?col:"rgba(255,255,255,.1)"}}/>)}</div>
-    <div style={{fontSize:".66rem",...M,color:col}}>{["太短","弱","普通","強","非常強"][sc]}：{[pass.length<8?"需8字":"✓8字",!/[A-Z]/.test(pass)?"需大寫":"✓大寫",!/[0-9]/.test(pass)?"需數字":"✓數字",!/[^A-Za-z0-9]/.test(pass)?"建議符號":"✓符號"].join("·")}</div>
-  </div>;
+  return el("div",{style:{marginTop:5}},
+    el("div",{style:{display:"flex",gap:3,marginBottom:3}},
+      chk.map((_,i)=>el("div",{key:i,style:{flex:1,height:3,borderRadius:2,background:i<sc?col:"rgba(255,255,255,.1)"}}))
+    ),
+    el("div",{style:{fontSize:".66rem",...M,color:col}},
+      ["太短","弱","普通","強","非常強"][sc]+"："+[pass.length<8?"需8字":"✓8字",!/[A-Z]/.test(pass)?"需大寫":"✓大寫",!/[0-9]/.test(pass)?"需數字":"✓數字",!/[^A-Za-z0-9]/.test(pass)?"建議符號":"✓符號"].join("·")
+    )
+  );
 }
 
+// ══ 主 APP ══
 function App(){
   const [ready,setReady]=useState(false);
   const [screen,setScreen]=useState("login");
@@ -144,17 +181,21 @@ function App(){
   const [modal,setModal]=useState(null);
   const timer=useRef(null);
 
-  const [lu,setLu]=useState("");const [lp,setLp]=useState("");const [lf,setLf]=useState("B1F");const [le,setLe]=useState("");
-  const [att,setAtt]=useState(0);const [lock,setLock]=useState(null);const [slp,setSlp]=useState(false);
-  const [rq,setRq]=useState({});const [rm,setRm]=useState("");const [rn,setRn]=useState("正常");
-  const [iN,setIN]=useState("");const [iU,setIU]=useState("");const [iP,setIP]=useState("");const [iW,setIW]=useState("");const [iS,setIS]=useState("");
-  const [uN,setUN]=useState("");const [uP,setUP]=useState("");const [uR,setUR]=useState("User");
-  const [rId,setRId]=useState("");const [rQty,setRQty]=useState("");
-  const [ff,setFf]=useState("");const [fi,setFi]=useState("");
-  const [po,setPo]=useState("");const [pn,setPn]=useState("");const [pc,setPc]=useState("");
-  const [editMIdx,setEditMIdx]=useState(null);const [editMName,setEditMName]=useState("");const [newMName,setNewMName]=useState("");
+  // 表單 state
+  const [lu,setLu]=useState(""); const [lp,setLp]=useState(""); const [lf,setLf]=useState("B1F");
+  const [le,setLe]=useState(""); const [att,setAtt]=useState(0); const [lock,setLock]=useState(null);
+  const [rq,setRq]=useState({}); const [rm,setRm]=useState(""); const [rn,setRn]=useState("正常");
+  const [iN,setIN]=useState(""); const [iU,setIU]=useState(""); const [iP,setIP]=useState("");
+  const [iW,setIW]=useState(""); const [iS,setIS]=useState("");
+  const [uN,setUN]=useState(""); const [uP,setUP]=useState(""); const [uR,setUR]=useState("User");
+  const [rId,setRId]=useState(""); const [rQty,setRQty]=useState("");
+  const [ff,setFf]=useState(""); const [fi,setFi]=useState("");
+  const [po,setPo]=useState(""); const [pn,setPn]=useState(""); const [pc,setPc]=useState("");
+  const [editMIdx,setEditMIdx]=useState(null); const [editMName,setEditMName]=useState(""); const [newMName,setNewMName]=useState("");
 
-  const t2=useCallback((msg,type="info",dur=3000)=>{setToast({msg,type});setTimeout(()=>setToast({msg:"",type:"info"}),dur);},[]);
+  const t2=useCallback((msg,type="info",dur=3000)=>{
+    setToast({msg,type}); setTimeout(()=>setToast({msg:"",type:"info"}),dur);
+  },[]);
 
   const resetTimer=useCallback(()=>{
     if(timer.current)clearTimeout(timer.current);
@@ -163,32 +204,33 @@ function App(){
 
   useEffect(()=>{if(me)resetTimer();return()=>{if(timer.current)clearTimeout(timer.current);};},[me]);
 
+  // Firebase 監聽
   useEffect(()=>{
     db.ref("machines").on("value",snap=>{
       const v=snap.val();
-      if(v){setMachines(Object.entries(v).map(([k,m])=>({...m,fbKey:k})).sort((a,b)=>(a.idx||0)-(b.idx||0)));}
-      else{const o={};DEF_MACH.forEach((name,i)=>{o[`m${i+1}`]={id:`m${i+1}`,idx:i,name};});db.ref("machines").set(o);}
+      if(v){ setMachines(Object.entries(v).map(([k,m])=>({...m,fbKey:k})).sort((a,b)=>(a.idx||0)-(b.idx||0))); }
+      else{ const o={}; DEF_MACH.forEach((name,i)=>{o[`m${i+1}`]={id:`m${i+1}`,idx:i,name};}); db.ref("machines").set(o); }
     });
     db.ref("items").on("value",snap=>{
       const v=snap.val();
-      if(v)setItems(Object.values(v));
-      else{const o={};DEF_ITEMS.forEach(i=>{o[i.id]=i;});db.ref("items").set(o);}
+      if(v) setItems(Object.values(v));
+      else{ const o={}; DEF_ITEMS.forEach(i=>{o[i.id]=i;}); db.ref("items").set(o); }
     });
     db.ref("users").on("value",async snap=>{
       const v=snap.val();
-      if(v){setUsers(Object.values(v));}
+      if(v){ setUsers(Object.values(v)); }
       else{
         const defs=[{id:"u1",name:"ray",role:"Super"},{id:"u2",name:"jason",role:"Admin"},{id:"u3",name:"user1",role:"User"}];
         const pw=["admin123","jason123","pass123"];
         const o={};
-        for(let i=0;i<defs.length;i++)o[defs[i].id]={...defs[i],pass:await hp(pw[i])};
+        for(let i=0;i<defs.length;i++) o[defs[i].id]={...defs[i],pass:await hashPass(pw[i])};
         db.ref("users").set(o);
       }
       setReady(true);
     });
     db.ref("records").on("value",snap=>{
       const v=snap.val();
-      if(v){const arr=Object.entries(v).map(([k,r])=>({...r,fbKey:k})).sort((a,b)=>new Date(b.time)-new Date(a.time));setRecords(arr.slice(0,200));}
+      if(v){ const arr=Object.entries(v).map(([k,r])=>({...r,fbKey:k})).sort((a,b)=>new Date(b.time)-new Date(a.time)); setRecords(arr.slice(0,200)); }
       else setRecords([]);
     });
   },[]);
@@ -198,20 +240,17 @@ function App(){
   const fbp=(path,data)=>db.ref(path).push(data);
 
   const isAdmin=me?.role==="Super"||me?.role==="Admin";
-  const canMgr=(u)=>{
-    if(me?.role==="Super")return u.role!=="Super"||u.id===me.id;
-    if(me?.role==="Admin")return u.role==="User";
-    return false;
-  };
+  const canMgr=(u)=>{ if(me?.role==="Super") return u.role!=="Super"||u.id===me.id; if(me?.role==="Admin") return u.role==="User"; return false; };
   const isLocked=lock&&new Date()<lock;
   const machNames=machines.map(m=>m.name);
 
+  // 登入
   const doLogin=async()=>{
     if(isLocked){const l=Math.ceil((lock-new Date())/60000);setLe(`已鎖定，請等 ${l} 分鐘`);return;}
-    const h=await hp(lp);
-    const u=users.find(x=>x.name.trim()===lu.trim()&&x.pass===h);
+    const hash=await hashPass(lp);
+    const u=users.find(x=>x.name.trim()===lu.trim()&&x.pass===hash);
     if(!u){
-      const n=att+1;setAtt(n);
+      const n=att+1; setAtt(n);
       if(n>=MAX_ATT){setLock(new Date(Date.now()+LOCK_MIN*60000));setLe(`失敗過多，鎖定 ${LOCK_MIN} 分鐘`);}
       else setLe(`帳號或密碼錯誤（剩 ${MAX_ATT-n} 次）`);
       return;
@@ -226,12 +265,11 @@ function App(){
     if(!po||!pn||!pc){t2("請填寫所有欄位","error");return;}
     if(pn!==pc){t2("新密碼不一致","error");return;}
     if(pn.length<8){t2("密碼至少 8 字元","error");return;}
-    if(await hp(po)!==me.pass){t2("目前密碼錯誤","error");return;}
+    if(await hashPass(po)!==me.pass){t2("目前密碼錯誤","error");return;}
     try{
-      const nh=await hp(pn);
+      const nh=await hashPass(pn);
       await fbs(`users/${me.id}`,{id:me.id,name:me.name,role:me.role,pass:nh});
-      setMe(prev=>({...prev,pass:nh}));
-      setUsers(prev=>prev.map(u=>u.id===me.id?{...u,pass:nh}:u));
+      setMe(prev=>({...prev,pass:nh})); setUsers(prev=>prev.map(u=>u.id===me.id?{...u,pass:nh}:u));
       setPo("");setPn("");setPc("");t2("✅ 密碼已更新","success");
     }catch(e){t2("❌ 更新失敗："+e.message,"error",5000);}
   };
@@ -246,12 +284,12 @@ function App(){
   };
 
   const doReq=async()=>{
-    let any=false,errs=[];const upd={};
+    let any=false,errs=[],upd={};
     items.forEach(item=>{const q=parseInt(rq[item.id])||0;if(q<=0)return;if(q>item.stock){errs.push(`${item.name}庫存不足`);return;}any=true;upd[item.id]={...item,stock:item.stock-q};});
     if(errs.length){t2("⚠️ "+errs.join("、"),"error",4000);return;}
     if(!any){t2("請輸入至少一項數量","error");return;}
     const mach=rm||machNames[0]||"";
-    for(const item of Object.values(upd))await fbs(`items/${item.id}`,item);
+    for(const item of Object.values(upd)) await fbs(`items/${item.id}`,item);
     for(const item of items){const q=parseInt(rq[item.id])||0;if(q<=0)continue;await fbp("records",{time:new Date().toLocaleString("zh-TW"),machine:mach,floor:mach,item:item.name,qty:q,user:me.name,note:rn});}
     setRq({});setRn("正常");t2("✅ 領用成功","success");resetTimer();
     const low=items.filter(i=>upd[i.id]&&upd[i.id].stock<=i.warn);
@@ -274,13 +312,16 @@ function App(){
   const delItem=(it)=>setModal({title:"刪除物料",body:`確定刪除「${it.name}」？`,okRed:true,okLabel:"確定刪除",onOk:async()=>{await fbd(`items/${it.id}`);t2("🗑️ 已刪除");}});
   const rstItem=(it)=>{
     let q=0;
-    setModal({title:`補庫：${it.name}`,body:<div><div style={{marginBottom:8,color:C.muted,...M,fontSize:".8rem"}}>現有：<strong style={{color:C.gold}}>{it.stock} {it.unit}</strong></div>
-      <input type="number" defaultValue="" onChange={e=>q=parseInt(e.target.value)||0} placeholder="補庫數量"
-        style={{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.3)",borderRadius:8,padding:"9px 12px",color:C.cream,...M,outline:"none",fontSize:".9rem"}}/></div>,
-      onOk:async()=>{if(q<=0){t2("請輸入有效數量","error");return;}await fbs(`items/${it.id}`,{...it,stock:it.stock+q});t2(`✅ 補庫 ${q} ${it.unit} 成功`,"success");}});
+    setModal({title:`補庫：${it.name}`,
+      body:el("div",null,
+        el("div",{style:{marginBottom:8,color:C.muted,...M,fontSize:".8rem"}},"現有：",el("strong",{style:{color:C.gold}},`${it.stock} ${it.unit}`)),
+        el("input",{type:"number",onChange:e=>{q=parseInt(e.target.value)||0;},placeholder:"補庫數量",style:{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.3)",borderRadius:8,padding:"9px 12px",color:C.cream,...M,outline:"none",fontSize:".9rem"}})
+      ),
+      onOk:async()=>{if(q<=0){t2("請輸入有效數量","error");return;}await fbs(`items/${it.id}`,{...it,stock:it.stock+q});t2(`✅ 補庫 ${q} ${it.unit} 成功`,"success");}
+    });
   };
   const doRestock=async()=>{
-    const q=parseInt(rQty)||0,it=items.find(i=>i.id===rId);
+    const q=parseInt(rQty)||0, it=items.find(i=>i.id===rId);
     if(!it||q<=0){t2("請選擇物料並輸入數量","error");return;}
     await fbs(`items/${it.id}`,{...it,stock:it.stock+q});setRQty("");t2(`✅ ${it.name} 補庫完成`,"success");
   };
@@ -293,7 +334,7 @@ function App(){
     if(users.find(u=>u.name===tn)){t2("帳號已存在","error");return;}
     if(me?.role==="Admin"&&uR!=="User"){t2("Admin 只能新增 User","error");return;}
     const id="u"+Date.now();
-    await fbs(`users/${id}`,{id,name:tn,pass:await hp(tp),role:uR});
+    await fbs(`users/${id}`,{id,name:tn,pass:await hashPass(tp),role:uR});
     setUN("");setUP("");t2("✅ 帳號已建立","success");
   };
   const delUser=(u)=>{
@@ -303,10 +344,10 @@ function App(){
   const rstPw=(u)=>{
     if(!canMgr(u)){t2("權限不足","error");return;}
     let np="";
-    setModal({title:`重設密碼：${u.name}`,body:<div>
-      <input type="password" onChange={e=>np=e.target.value} placeholder="新密碼（至少8字元）"
-        style={{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.3)",borderRadius:8,padding:"9px 12px",color:C.cream,...M,outline:"none",fontSize:".9rem"}}/></div>,
-      onOk:async()=>{if(np.length<8){t2("密碼至少 8 字元","error");return;}await fbs(`users/${u.id}`,{...u,pass:await hp(np)});t2(`✅ ${u.name} 密碼已重設`,"success");}});
+    setModal({title:`重設密碼：${u.name}`,
+      body:el("input",{type:"password",onChange:e=>{np=e.target.value;},placeholder:"新密碼（至少8字元）",style:{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.3)",borderRadius:8,padding:"9px 12px",color:C.cream,...M,outline:"none",fontSize:".9rem"}}),
+      onOk:async()=>{if(np.length<8){t2("密碼至少 8 字元","error");return;}await fbs(`users/${u.id}`,{...u,pass:await hashPass(np)});t2(`✅ ${u.name} 密碼已重設`,"success");}
+    });
   };
 
   const addMachine=async()=>{
@@ -331,327 +372,342 @@ function App(){
   const filtR=records.filter(r=>(!ff||r.machine===ff)&&(!fi||r.item===fi));
   const tabs=[{id:"supply",icon:"📦",label:"供應",always:true},{id:"records",icon:"📋",label:"紀錄",always:true},{id:"admin",icon:"⚙️",label:"管理",always:false},{id:"analytics",icon:"📊",label:"分析",always:false},{id:"profile",icon:"👤",label:"帳號",always:true}].filter(t=>t.always||isAdmin);
 
-  if(!ready)return<div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:C.bg,gap:16}}><div style={{...S,fontSize:"2rem",color:C.gold}}>☕ 上班趣 Coffee</div><div style={{color:C.muted,...M,fontSize:".82rem",animation:"blink 1s infinite"}}>連線中...</div></div>;
-
-  if(screen==="login")return(
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,padding:16}}>
-      <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 60% at 20% 10%,rgba(196,122,43,.15) 0%,transparent 60%)",pointerEvents:"none"}}/>
-      <div className="loginIn" style={{background:`linear-gradient(145deg,${C.roast},#2a1508)`,border:"1px solid rgba(196,122,43,.35)",borderRadius:20,padding:"44px 36px",width:"min(400px,100%)",boxShadow:"0 28px 70px rgba(0,0,0,.65)",zIndex:1}}>
-        <div style={{...S,fontSize:"1.9rem",fontWeight:900,color:C.gold,textAlign:"center",marginBottom:4}}>☕ 上班趣 Coffee</div>
-        <div style={{textAlign:"center",color:C.muted,fontSize:".72rem",marginBottom:28,...M}}>WISTRON ERP · COFFEE INVENTORY</div>
-        {isLocked&&<div style={{background:"rgba(192,57,43,.15)",border:"1px solid rgba(192,57,43,.4)",borderRadius:8,padding:"9px 12px",color:"#e74c3c",fontSize:".76rem",...M,marginBottom:14,textAlign:"center"}}>🔒 帳號已鎖定</div>}
-        <div style={{marginBottom:14}}>
-          <div style={{fontSize:".68rem",...M,color:C.muted,marginBottom:6}}>帳號</div>
-          <input type="text" value={lu} onChange={e=>setLu(e.target.value)} placeholder="輸入帳號" disabled={isLocked} onKeyDown={e=>e.key==="Enter"&&!isLocked&&doLogin()}
-            style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:9,padding:"11px 14px",color:C.cream,fontSize:".92rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}}/>
-        </div>
-        <div style={{marginBottom:14}}>
-          <div style={{fontSize:".68rem",...M,color:C.muted,marginBottom:6}}>密碼</div>
-          <div style={{position:"relative"}}>
-            <input type={slp?"text":"password"} value={lp} onChange={e=>setLp(e.target.value)} placeholder="輸入密碼" disabled={isLocked} onKeyDown={e=>e.key==="Enter"&&!isLocked&&doLogin()}
-              style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:9,padding:"11px 38px 11px 14px",color:C.cream,fontSize:".92rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}}/>
-            <button type="button" onClick={()=>setSlp(s=>!s)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:".95rem"}}>{slp?"🙈":"👁️"}</button>
-          </div>
-        </div>
-        <div style={{marginBottom:22}}>
-          <div style={{fontSize:".68rem",...M,color:C.muted,marginBottom:6}}>所在樓層</div>
-          <select value={lf} onChange={e=>setLf(e.target.value)} style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:9,padding:"11px 14px",color:C.cream,fontSize:".9rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}}>
-            {["B1F","1F","2F","3F"].map(f=><option key={f} style={{background:C.roast}}>{f}</option>)}
-          </select>
-        </div>
-        <Btn onClick={doLogin} disabled={isLocked} style={{width:"100%",padding:"13px",borderRadius:10,fontSize:".95rem"}}>登入系統</Btn>
-        {le&&<div style={{color:"#e74c3c",fontSize:".76rem",textAlign:"center",marginTop:10,...M}}>{le}</div>}
-        <div style={{textAlign:"center",marginTop:16,color:C.muted,fontSize:".67rem",...M}}>🔐 加密·⏱️{SESS_MIN}分自動登出·🔒{MAX_ATT}次失敗鎖定</div>
-      </div>
-    </div>
+  // ── 載入畫面 ──
+  if(!ready) return el("div",{style:{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:C.bg,gap:16}},
+    el("div",{style:{...S,fontSize:"2rem",color:C.gold}},"☕ 上班趣 Coffee"),
+    el("div",{style:{color:C.muted,...M,fontSize:".82rem",animation:"blink 1s infinite"}},"連線中...")
   );
 
-  if(screen==="logout")return(
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,padding:16}}>
-      <div className="loginIn" style={{background:`linear-gradient(145deg,${C.roast},#1e0e06)`,border:"1px solid rgba(196,122,43,.3)",borderRadius:20,padding:"44px 36px",width:"min(380px,100%)",textAlign:"center"}}>
-        <div style={{fontSize:"3rem",marginBottom:16}}>🚪</div>
-        <div style={{...S,fontSize:"1.5rem",color:C.cream,marginBottom:20}}>確認登出？</div>
-        <div style={{display:"flex",gap:10}}>
-          <button onClick={()=>setScreen("app")} style={{flex:1,padding:12,background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.12)",borderRadius:10,color:C.cream,cursor:"pointer",fontSize:".88rem",fontFamily:"'Noto Serif TC',serif",fontWeight:600}}>取消</button>
-          <button onClick={doLogout} style={{flex:1,padding:12,background:"linear-gradient(135deg,#c0392b,#e74c3c)",border:"none",borderRadius:10,color:"#fff",cursor:"pointer",fontSize:".88rem",fontFamily:"'Noto Serif TC',serif",fontWeight:700}}>確認登出</button>
-        </div>
-      </div>
-    </div>
+  // ── 登入畫面 ──
+  if(screen==="login") return el("div",{style:{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,padding:16}},
+    el("div",{style:{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 60% at 20% 10%,rgba(196,122,43,.15) 0%,transparent 60%)",pointerEvents:"none"}}),
+    el("div",{style:{background:`linear-gradient(145deg,${C.roast},#2a1508)`,border:"1px solid rgba(196,122,43,.35)",borderRadius:20,padding:"44px 36px",width:"min(400px,100%)",boxShadow:"0 28px 70px rgba(0,0,0,.65)",zIndex:1}},
+      el("div",{style:{...S,fontSize:"1.9rem",fontWeight:900,color:C.gold,textAlign:"center",marginBottom:4}},"☕ 上班趣 Coffee"),
+      el("div",{style:{textAlign:"center",color:C.muted,fontSize:".72rem",marginBottom:28,...M}},"WISTRON ERP · COFFEE INVENTORY"),
+      isLocked && el("div",{style:{background:"rgba(192,57,43,.15)",border:"1px solid rgba(192,57,43,.4)",borderRadius:8,padding:"9px 12px",color:"#e74c3c",fontSize:".76rem",...M,marginBottom:14,textAlign:"center"}},"🔒 帳號已鎖定"),
+      el("div",{style:{marginBottom:14}},
+        el("div",{style:{fontSize:".68rem",...M,color:C.muted,marginBottom:6}},"帳號"),
+        el("input",{type:"text",value:lu,onChange:e=>setLu(e.target.value),placeholder:"輸入帳號",disabled:isLocked,onKeyDown:e=>e.key==="Enter"&&!isLocked&&doLogin(),
+          style:{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:9,padding:"11px 14px",color:C.cream,fontSize:".92rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}})
+      ),
+      el("div",{style:{marginBottom:14}},
+        el("div",{style:{fontSize:".68rem",...M,color:C.muted,marginBottom:6}},"密碼"),
+        el(PwInp,{value:lp,onChange:setLp,placeholder:"輸入密碼",disabled:isLocked})
+      ),
+      el("div",{style:{marginBottom:22}},
+        el("div",{style:{fontSize:".68rem",...M,color:C.muted,marginBottom:6}},"所在樓層"),
+        el("select",{value:lf,onChange:e=>setLf(e.target.value),style:{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.25)",borderRadius:9,padding:"11px 14px",color:C.cream,fontSize:".9rem",outline:"none",fontFamily:"'Noto Serif TC',serif"}},
+          ["B1F","1F","2F","3F"].map(f=>el("option",{key:f,style:{background:C.roast}},f))
+        )
+      ),
+      el(Btn,{onClick:doLogin,disabled:isLocked,style:{width:"100%",padding:"13px",borderRadius:10,fontSize:".95rem"}},"登入系統"),
+      le && el("div",{style:{color:"#e74c3c",fontSize:".76rem",textAlign:"center",marginTop:10,...M}},le),
+      el("div",{style:{textAlign:"center",marginTop:16,color:C.muted,fontSize:".67rem",...M}},`🔐 加密·⏱️${SESS_MIN}分自動登出·🔒${MAX_ATT}次失敗鎖定`)
+    )
   );
 
-  return <>
-    <nav style={{position:"sticky",top:0,zIndex:50,background:"rgba(26,15,7,.94)",backdropFilter:"blur(16px)",borderBottom:"1px solid rgba(196,122,43,.2)",display:"flex",alignItems:"center",padding:"0 14px",height:56,gap:3}}>
-      <div style={{...S,fontWeight:900,fontSize:"1rem",color:C.gold,marginRight:"auto",whiteSpace:"nowrap"}}>☕ 上班趣 <span style={{color:C.muted,fontWeight:400,fontSize:".6rem",...M,marginLeft:4}}>⚡</span></div>
-      <div className="desknav" style={{display:"flex",gap:2}}>
-        {tabs.map(t=><div key={t.id} onClick={()=>setPage(t.id)} style={{padding:"6px 12px",borderRadius:7,cursor:"pointer",fontSize:".74rem",color:page===t.id?C.gold:C.muted,background:page===t.id?"rgba(196,122,43,.12)":"transparent",border:page===t.id?"1px solid rgba(196,122,43,.28)":"1px solid transparent",...M,whiteSpace:"nowrap"}}>{t.icon} {t.label}</div>)}
-      </div>
-      <div style={{display:"flex",alignItems:"center",gap:7,marginLeft:8}}>
-        <span className="hidmob" style={{fontSize:".72rem",...M,color:C.muted}}>{me?.name}</span>
-        <Tag label={me?.role} type={me?.role==="Super"?"danger":me?.role==="Admin"?"warn":"safe"}/>
-        <button onClick={()=>setScreen("logout")} style={{background:"none",border:"1px solid rgba(255,255,255,.12)",color:C.muted,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:".7rem",...M}}>登出</button>
-      </div>
-    </nav>
+  // ── 登出確認 ──
+  if(screen==="logout") return el("div",{style:{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,padding:16}},
+    el("div",{style:{background:`linear-gradient(145deg,${C.roast},#1e0e06)`,border:"1px solid rgba(196,122,43,.3)",borderRadius:20,padding:"44px 36px",width:"min(380px,100%)",textAlign:"center"}},
+      el("div",{style:{fontSize:"3rem",marginBottom:16}},"🚪"),
+      el("div",{style:{...S,fontSize:"1.5rem",color:C.cream,marginBottom:20}},"確認登出？"),
+      el("div",{style:{display:"flex",gap:10}},
+        el("button",{onClick:()=>setScreen("app"),style:{flex:1,padding:12,background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.12)",borderRadius:10,color:C.cream,cursor:"pointer",fontSize:".88rem",fontFamily:"'Noto Serif TC',serif",fontWeight:600}},"取消"),
+        el("button",{onClick:doLogout,style:{flex:1,padding:12,background:"linear-gradient(135deg,#c0392b,#e74c3c)",border:"none",borderRadius:10,color:"#fff",cursor:"pointer",fontSize:".88rem",fontFamily:"'Noto Serif TC',serif",fontWeight:700}},"確認登出")
+      )
+    )
+  );
 
-    <div className="mobnav" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,zIndex:50,background:"rgba(26,15,7,.97)",borderTop:"1px solid rgba(196,122,43,.22)",padding:"5px 0 6px",justifyContent:"space-around"}}>
-      {tabs.map(t=><div key={t.id} onClick={()=>setPage(t.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,cursor:"pointer",padding:"3px 8px",borderRadius:7,background:page===t.id?"rgba(196,122,43,.1)":"transparent",minWidth:46}}>
-        <span style={{fontSize:"1.15rem"}}>{t.icon}</span>
-        <span style={{fontSize:".58rem",...M,color:page===t.id?C.gold:C.muted}}>{t.label}</span>
-      </div>)}
-    </div>
+  // ── 主畫面 ──
+  const inpSt={width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"9px 12px",color:C.cream,fontSize:".88rem",outline:"none",...M};
+  const selSt={...inpSt};
+  const thSt={padding:"9px 14px",textAlign:"left",fontSize:".66rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...M};
+  const tdSt={padding:"10px 14px",borderBottom:"1px solid rgba(255,255,255,.04)"};
 
-    <div className="pad fadeUp" style={{padding:"22px 20px 80px",maxWidth:1200,margin:"0 auto"}} onClick={resetTimer}>
+  return el(Fragment,null,
+    // 頂部導覽
+    el("nav",{style:{position:"sticky",top:0,zIndex:50,background:"rgba(26,15,7,.94)",backdropFilter:"blur(16px)",borderBottom:"1px solid rgba(196,122,43,.2)",display:"flex",alignItems:"center",padding:"0 14px",height:56,gap:3}},
+      el("div",{style:{...S,fontWeight:900,fontSize:"1rem",color:C.gold,marginRight:"auto",whiteSpace:"nowrap"}},"☕ 上班趣 ",el("span",{style:{color:C.muted,fontWeight:400,fontSize:".6rem",...M,marginLeft:4}},"⚡")),
+      el("div",{className:"desknav",style:{display:"flex",gap:2}},
+        tabs.map(t=>el("div",{key:t.id,onClick:()=>setPage(t.id),style:{padding:"6px 12px",borderRadius:7,cursor:"pointer",fontSize:".74rem",color:page===t.id?C.gold:C.muted,background:page===t.id?"rgba(196,122,43,.12)":"transparent",border:page===t.id?"1px solid rgba(196,122,43,.28)":"1px solid transparent",...M,whiteSpace:"nowrap"}},t.icon+" "+t.label))
+      ),
+      el("div",{style:{display:"flex",alignItems:"center",gap:7,marginLeft:8}},
+        el("span",{className:"hidmob",style:{fontSize:".72rem",...M,color:C.muted}},me?.name),
+        el(Tag,{label:me?.role,type:me?.role==="Super"?"danger":me?.role==="Admin"?"warn":"safe"}),
+        el("button",{onClick:()=>setScreen("logout"),style:{background:"none",border:"1px solid rgba(255,255,255,.12)",color:C.muted,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:".7rem",...M}},"登出")
+      )
+    ),
 
-      {page==="supply"&&<>
-        <div style={{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}}>物料供應台</div>
-        <div style={{color:C.muted,fontSize:".76rem",marginBottom:22,...M}}>MATERIAL SUPPLY · 即時雲端庫存</div>
-        <div className="g4" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
-          {[{icon:"📦",label:"低庫存警示",val:lowCnt,unit:"項",accent:lowCnt>0?"#e74c3c":C.safe},{icon:"✅",label:"庫存正常",val:items.length-lowCnt,unit:"項",accent:C.safe},{icon:"📋",label:"今日領用",val:todayR.length,unit:"筆",accent:C.cream},{icon:"💰",label:"本月成本",val:mCost(),unit:"元",accent:C.cream}].map(s=>(
-            <div key={s.label} style={{background:"linear-gradient(145deg,rgba(59,31,14,.8),rgba(26,15,7,.6))",border:"1px solid rgba(196,122,43,.18)",borderRadius:12,padding:"14px 14px 10px",position:"relative"}}>
-              <div style={{position:"absolute",right:10,top:8,fontSize:"1.2rem",opacity:.25}}>{s.icon}</div>
-              <div style={{fontSize:".64rem",color:C.muted,...M}}>{s.label}</div>
-              <div style={{...S,fontSize:"1.7rem",fontWeight:700,color:s.accent,margin:"3px 0 1px"}}>{s.val}</div>
-              <div style={{fontSize:".64rem",color:C.muted}}>{s.unit}</div>
-            </div>
-          ))}
-        </div>
-        <Card title="📦 現有庫存" hint="即時同步">
-          <table style={{width:"100%",borderCollapse:"collapse"}}>
-            <thead><tr>{["物料","庫存","狀態","警戒","單價"].map(h=><th key={h} style={{padding:"10px 14px",textAlign:"left",fontSize:".66rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...M}}>{h}</th>)}</tr></thead>
-            <tbody>{items.map(item=>{const pct=Math.min(100,Math.round(item.stock/(item.warn*5)*100));return(
-              <tr key={item.id} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
-                <td style={{padding:"11px 14px",fontWeight:600}}>{item.name}</td>
-                <td style={{padding:"11px 14px"}}><div style={{display:"flex",alignItems:"center",gap:7}}><strong style={{...M}}>{item.stock.toLocaleString()}</strong><span style={{fontSize:".68rem",color:C.muted,...M}}>{item.unit}</span><Bar pct={pct}/></div></td>
-                <td style={{padding:"11px 14px"}}><Tag label={pct>40?"充足":pct>20?"注意":"補貨"} type={pct>40?"safe":pct>20?"warn":"danger"}/></td>
-                <td style={{padding:"11px 14px",fontSize:".76rem",color:C.muted,...M}}>{item.warn}</td>
-                <td style={{padding:"11px 14px",color:C.gold,...M}}>${item.price}</td>
-              </tr>
-            );})}</tbody>
-          </table>
-        </Card>
-        <Card title="☕ 領用申請">
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14,padding:18}}>
-            {items.map(item=>(
-              <div key={item.id}>
-                <div style={{fontSize:".7rem",color:C.muted,...M,marginBottom:5}}>📦 {item.name} ({item.unit}) 庫存:{item.stock.toLocaleString()}</div>
-                <input type="number" min="0" value={rq[item.id]||""} onChange={e=>setRq(p=>({...p,[item.id]:e.target.value}))} placeholder="0"
-                  style={{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"9px 12px",color:C.cream,fontSize:".9rem",outline:"none",...M}}/>
-              </div>
-            ))}
-          </div>
-          <div style={{padding:"12px 18px",display:"flex",alignItems:"center",gap:10,borderTop:"1px solid rgba(196,122,43,.1)",flexWrap:"wrap"}}>
-            <span style={{fontSize:".74rem",color:C.muted,...M}}>機台：</span>
-            <select value={rm||machNames[0]||""} onChange={e=>setRm(e.target.value)} style={{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.22)",borderRadius:7,padding:"7px 11px",color:C.cream,...M,fontSize:".8rem",outline:"none"}}>
-              {machNames.map(m=><option key={m} style={{background:C.roast}}>{m}</option>)}
-            </select>
-            <span style={{fontSize:".74rem",color:C.muted,...M}}>狀況：</span>
-            <select value={rn} onChange={e=>setRn(e.target.value)} style={{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.22)",borderRadius:7,padding:"7px 11px",color:C.cream,...M,fontSize:".8rem",outline:"none"}}>
-              <option value="正常" style={{background:C.roast}}>✅ 正常</option>
-              <option value="待修" style={{background:C.roast}}>🔧 待修</option>
-              <option value="保養中" style={{background:C.roast}}>🛠️ 保養中</option>
-            </select>
-            <Btn onClick={doReq}>✓ 確認領用</Btn>
-          </div>
-        </Card>
-      </>}
+    // 手機底部導覽
+    el("div",{className:"mobnav",style:{display:"none",position:"fixed",bottom:0,left:0,right:0,zIndex:50,background:"rgba(26,15,7,.97)",borderTop:"1px solid rgba(196,122,43,.22)",padding:"5px 0 6px",justifyContent:"space-around"}},
+      tabs.map(t=>el("div",{key:t.id,onClick:()=>setPage(t.id),style:{display:"flex",flexDirection:"column",alignItems:"center",gap:1,cursor:"pointer",padding:"3px 8px",borderRadius:7,background:page===t.id?"rgba(196,122,43,.1)":"transparent",minWidth:46}},
+        el("span",{style:{fontSize:"1.15rem"}},t.icon),
+        el("span",{style:{fontSize:".58rem",...M,color:page===t.id?C.gold:C.muted}},t.label)
+      ))
+    ),
 
-      {page==="records"&&<>
-        <div style={{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}}>領用紀錄</div>
-        <div style={{color:C.muted,fontSize:".76rem",marginBottom:22,...M}}>USAGE RECORDS</div>
-        <Card>
-          <div style={{padding:"11px 16px",display:"flex",gap:8,flexWrap:"wrap",borderBottom:"1px solid rgba(196,122,43,.08)"}}>
-            <select value={ff} onChange={e=>setFf(e.target.value)} style={{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.2)",borderRadius:7,padding:"7px 11px",color:C.cream,...M,fontSize:".78rem",outline:"none"}}>
-              <option value="" style={{background:C.roast}}>全部機台</option>
-              {machNames.map(m=><option key={m} value={m} style={{background:C.roast}}>{m}</option>)}
-            </select>
-            <select value={fi} onChange={e=>setFi(e.target.value)} style={{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.2)",borderRadius:7,padding:"7px 11px",color:C.cream,...M,fontSize:".78rem",outline:"none"}}>
-              <option value="" style={{background:C.roast}}>全部物料</option>
-              {items.map(i=><option key={i.id} value={i.name} style={{background:C.roast}}>{i.name}</option>)}
-            </select>
-          </div>
-          <table style={{width:"100%",borderCollapse:"collapse"}}>
-            <thead><tr>{["時間","機台","物料","數量","操作者","備註"].map(h=><th key={h} style={{padding:"9px 14px",textAlign:"left",fontSize:".66rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...M}}>{h}</th>)}</tr></thead>
-            <tbody>
-              {filtR.slice(0,100).map((r,i)=>(
-                <tr key={r.fbKey||i} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
-                  <td style={{padding:"10px 14px",fontSize:".72rem",color:C.muted,...M}}>{r.time}</td>
-                  <td style={{padding:"10px 14px"}}><span style={{background:"rgba(196,122,43,.1)",border:"1px solid rgba(196,122,43,.25)",color:C.caramel,borderRadius:4,padding:"2px 7px",fontSize:".67rem",...M}}>{r.machine}</span></td>
-                  <td style={{padding:"10px 14px",fontSize:".85rem"}}>{r.item}</td>
-                  <td style={{padding:"10px 14px",color:C.gold,...M,fontWeight:700}}>{r.qty}</td>
-                  <td style={{padding:"10px 14px",fontSize:".8rem",color:C.muted}}>{r.user}</td>
-                  <td style={{padding:"10px 14px",fontSize:".76rem",color:C.muted}}>{r.note||"—"}</td>
-                </tr>
-              ))}
-              {filtR.length===0&&<tr><td colSpan={6} style={{textAlign:"center",color:C.muted,padding:24,...M,fontSize:".8rem"}}>無資料</td></tr>}
-            </tbody>
-          </table>
-        </Card>
-      </>}
+    // 頁面內容
+    el("div",{className:"pad fadeUp",style:{padding:"22px 20px 80px",maxWidth:1200,margin:"0 auto"},onClick:resetTimer},
 
-      {page==="admin"&&<>
-        <div style={{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}}>後台管理</div>
-        <div style={{color:C.muted,fontSize:".76rem",marginBottom:22,...M}}>ADMIN PANEL</div>
-        <Card title="🤖 機器管理" hint="新增/編輯/刪除">
-          <div style={{padding:"16px 18px"}}>
-            <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-              <input value={newMName} onChange={e=>setNewMName(e.target.value)} placeholder="新機器名稱（如 W6）"
-                style={{flex:1,minWidth:120,background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"8px 12px",color:C.cream,...M,fontSize:".86rem",outline:"none"}}/>
-              <Btn onClick={addMachine} style={{padding:"8px 16px"}}>+ 新增</Btn>
-            </div>
-            <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr>{["#","名稱","操作"].map(h=><th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:".65rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...M}}>{h}</th>)}</tr></thead>
-              <tbody>{machines.map((m,i)=>(
-                <tr key={m.fbKey||i} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
-                  <td style={{padding:"10px 12px",color:C.muted,...M,fontSize:".72rem"}}>#{i+1}</td>
-                  <td style={{padding:"10px 12px"}}>{editMIdx===i?<input value={editMName} onChange={e=>setEditMName(e.target.value)} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(196,122,43,.4)",borderRadius:6,padding:"5px 9px",color:C.cream,...M,fontSize:".84rem",outline:"none",width:100}}/>:<strong style={{...M}}>{m.name}</strong>}</td>
-                  <td style={{padding:"10px 12px"}}><div style={{display:"flex",gap:5}}>
-                    {editMIdx===i?<><SBtn c="green" onClick={()=>saveMachine(m)}>儲存</SBtn><SBtn c="red" onClick={()=>{setEditMIdx(null);setEditMName("");}}>取消</SBtn></>
-                    :<><SBtn c="edit" onClick={()=>{setEditMIdx(i);setEditMName(m.name);}}>編輯</SBtn><SBtn c="red" onClick={()=>delMachine(m)}>刪除</SBtn></>}
-                  </div></td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-        </Card>
-        <div className="g2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
-          <div>
-            <Card title="🗃️ 物料管理">
-              <div style={{padding:"16px 18px",display:"flex",flexDirection:"column",gap:10}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
-                  {[["物料名稱",iN,setIN,"咖啡豆"],["單位",iU,setIU,"包/顆"]].map(([l,v,s,p])=><div key={l}><div style={{fontSize:".68rem",color:C.muted,...M,marginBottom:4}}>{l}</div><Inp value={v} onChange={s} placeholder={p}/></div>)}
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
-                  {[["單價",iP,setIP,"0"],["警戒水位",iW,setIW,"20"]].map(([l,v,s,p])=><div key={l}><div style={{fontSize:".68rem",color:C.muted,...M,marginBottom:4}}>{l}</div><Inp type="number" value={v} onChange={s} placeholder={p}/></div>)}
-                </div>
-                <div><div style={{fontSize:".68rem",color:C.muted,...M,marginBottom:4}}>初始庫存</div><Inp type="number" value={iS} onChange={setIS} placeholder="100"/></div>
-                <Btn onClick={addItem} style={{padding:"9px"}}>+ 新增物料</Btn>
-              </div>
-              <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead><tr>{["物料","庫存","單價","操作"].map(h=><th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:".64rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...M}}>{h}</th>)}</tr></thead>
-                <tbody>{items.map(it=>(
-                  <tr key={it.id} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
-                    <td style={{padding:"10px 12px"}}>{it.name}<br/><span style={{fontSize:".66rem",color:C.muted,...M}}>{it.unit}·警戒{it.warn}</span></td>
-                    <td style={{padding:"10px 12px",...M,color:it.stock<=it.warn?"#e74c3c":C.gold}}>{it.stock.toLocaleString()}</td>
-                    <td style={{padding:"10px 12px",...M,color:C.muted}}>${it.price}</td>
-                    <td style={{padding:"10px 12px"}}><div style={{display:"flex",gap:4,flexWrap:"wrap"}}><SBtn c="edit" onClick={()=>editItem(it)}>編輯</SBtn><SBtn c="green" onClick={()=>rstItem(it)}>補庫</SBtn><SBtn c="red" onClick={()=>delItem(it)}>刪除</SBtn></div></td>
-                  </tr>
-                ))}</tbody>
-              </table>
-            </Card>
-          </div>
-          <div>
-            <Card title="👤 帳號管理">
-              <div style={{padding:"16px 18px",display:"flex",flexDirection:"column",gap:10}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
-                  <div><div style={{fontSize:".68rem",color:C.muted,...M,marginBottom:4}}>帳號</div><Inp value={uN} onChange={setUN} placeholder="帳號"/></div>
-                  <div><div style={{fontSize:".68rem",color:C.muted,...M,marginBottom:4}}>密碼</div><Inp type="password" value={uP} onChange={setUP} placeholder="至少8字元"/><PwStr pass={uP}/></div>
-                </div>
-                <div><div style={{fontSize:".68rem",color:C.muted,...M,marginBottom:4}}>權限</div>
-                  <select value={uR} onChange={e=>setUR(e.target.value)} style={{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"9px 12px",color:C.cream,...M,fontSize:".86rem",outline:"none"}}>
-                    <option value="User" style={{background:C.roast}}>User（現場人員）</option>
-                    {me?.role==="Super"&&<option value="Admin" style={{background:C.roast}}>Admin（管理者）</option>}
-                    {me?.role==="Super"&&<option value="Super" style={{background:C.roast}}>Super（最高）</option>}
-                  </select>
-                </div>
-                <Btn onClick={addUser} style={{padding:"9px"}}>+ 新增帳號</Btn>
-              </div>
-              <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead><tr>{["帳號","權限","操作"].map(h=><th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:".64rem",color:C.muted,borderBottom:"1px solid rgba(196,122,43,.1)",...M}}>{h}</th>)}</tr></thead>
-                <tbody>{users.map(u=>(
-                  <tr key={u.id} style={{borderBottom:"1px solid rgba(255,255,255,.04)"}}>
-                    <td style={{padding:"10px 12px",...M,fontSize:".82rem"}}>{u.name}{u.id===me?.id&&<span style={{fontSize:".62rem",color:C.muted,marginLeft:4}}>(我)</span>}</td>
-                    <td style={{padding:"10px 12px"}}><Tag label={u.role} type={u.role==="Super"?"danger":u.role==="Admin"?"warn":"safe"}/></td>
-                    <td style={{padding:"10px 12px"}}><div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                      {canMgr(u)&&<SBtn c="blue" onClick={()=>rstPw(u)}>重設密碼</SBtn>}
-                      {canMgr(u)&&u.id!==me?.id&&<SBtn c="red" onClick={()=>delUser(u)}>刪除</SBtn>}
-                      {!canMgr(u)&&<span style={{fontSize:".7rem",color:C.muted}}>—</span>}
-                    </div></td>
-                  </tr>
-                ))}</tbody>
-              </table>
-            </Card>
-            <Card title="🚚 進貨補庫" style={{marginBottom:0}}>
-              <div style={{padding:"16px 18px",display:"flex",flexDirection:"column",gap:10}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
-                  <div><div style={{fontSize:".68rem",color:C.muted,...M,marginBottom:4}}>物料</div>
-                    <select value={rId} onChange={e=>setRId(e.target.value)} style={{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"9px 12px",color:C.cream,...M,fontSize:".86rem",outline:"none"}}>
-                      <option value="" style={{background:C.roast}}>選擇物料</option>
-                      {items.map(i=><option key={i.id} value={i.id} style={{background:C.roast}}>{i.name}</option>)}
-                    </select>
-                  </div>
-                  <div><div style={{fontSize:".68rem",color:C.muted,...M,marginBottom:4}}>進貨數量</div>
-                    <input type="number" value={rQty} onChange={e=>setRQty(e.target.value)} placeholder="50"
-                      style={{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"9px 12px",color:C.cream,...M,fontSize:".9rem",outline:"none"}}/>
-                  </div>
-                </div>
-                <Btn onClick={doRestock} color="green" style={{padding:"9px"}}>+ 確認進貨</Btn>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </>}
+      // ── 物料供應 ──
+      page==="supply" && el(Fragment,null,
+        el("div",{style:{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}},"物料供應台"),
+        el("div",{style:{color:C.muted,fontSize:".76rem",marginBottom:22,...M}},"MATERIAL SUPPLY · 即時雲端庫存"),
+        el("div",{className:"g4",style:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}},
+          [{icon:"📦",label:"低庫存警示",val:lowCnt,unit:"項",accent:lowCnt>0?"#e74c3c":C.safe},
+           {icon:"✅",label:"庫存正常",val:items.length-lowCnt,unit:"項",accent:C.safe},
+           {icon:"📋",label:"今日領用",val:todayR.length,unit:"筆",accent:C.cream},
+           {icon:"💰",label:"本月成本",val:mCost(),unit:"元",accent:C.cream}
+          ].map(s=>el("div",{key:s.label,style:{background:"linear-gradient(145deg,rgba(59,31,14,.8),rgba(26,15,7,.6))",border:"1px solid rgba(196,122,43,.18)",borderRadius:12,padding:"14px 14px 10px",position:"relative"}},
+            el("div",{style:{position:"absolute",right:10,top:8,fontSize:"1.2rem",opacity:.25}},s.icon),
+            el("div",{style:{fontSize:".64rem",color:C.muted,...M}},s.label),
+            el("div",{style:{...S,fontSize:"1.7rem",fontWeight:700,color:s.accent,margin:"3px 0 1px"}},s.val),
+            el("div",{style:{fontSize:".64rem",color:C.muted}},s.unit)
+          ))
+        ),
+        el(Card,{title:"📦 現有庫存",hint:"即時同步"},
+          el("table",{style:{width:"100%",borderCollapse:"collapse"}},
+            el("thead",null,el("tr",null,["物料","庫存","狀態","警戒","單價"].map(h=>el("th",{key:h,style:thSt},h)))),
+            el("tbody",null,items.map(item=>{
+              const pct=Math.min(100,Math.round(item.stock/(item.warn*5)*100));
+              return el("tr",{key:item.id},
+                el("td",{style:{...tdSt,fontWeight:600}},item.name),
+                el("td",{style:tdSt},el("div",{style:{display:"flex",alignItems:"center",gap:7}},el("strong",{style:M},item.stock.toLocaleString()),el("span",{style:{fontSize:".68rem",color:C.muted,...M}},item.unit),el(Bar,{pct}))),
+                el("td",{style:tdSt},el(Tag,{label:pct>40?"充足":pct>20?"注意":"補貨",type:pct>40?"safe":pct>20?"warn":"danger"})),
+                el("td",{style:{...tdSt,fontSize:".76rem",color:C.muted,...M}},item.warn),
+                el("td",{style:{...tdSt,color:C.gold,...M}},"$"+item.price)
+              );
+            }))
+          )
+        ),
+        el(Card,{title:"☕ 領用申請"},
+          el("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14,padding:18}},
+            items.map(item=>el("div",{key:item.id},
+              el("div",{style:{fontSize:".7rem",color:C.muted,...M,marginBottom:5}},`📦 ${item.name} (${item.unit}) 庫存:${item.stock.toLocaleString()}`),
+              el("input",{type:"number",min:"0",value:rq[item.id]||"",onChange:e=>setRq(p=>({...p,[item.id]:e.target.value})),placeholder:"0",style:{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(196,122,43,.22)",borderRadius:8,padding:"9px 12px",color:C.cream,fontSize:".9rem",outline:"none",...M}})
+            ))
+          ),
+          el("div",{style:{padding:"12px 18px",display:"flex",alignItems:"center",gap:10,borderTop:"1px solid rgba(196,122,43,.1)",flexWrap:"wrap"}},
+            el("span",{style:{fontSize:".74rem",color:C.muted,...M}},"機台："),
+            el("select",{value:rm||machNames[0]||"",onChange:e=>setRm(e.target.value),style:{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.22)",borderRadius:7,padding:"7px 11px",color:C.cream,...M,fontSize:".8rem",outline:"none"}},
+              machNames.map(m=>el("option",{key:m,style:{background:C.roast}},m))
+            ),
+            el("span",{style:{fontSize:".74rem",color:C.muted,...M}},"狀況："),
+            el("select",{value:rn,onChange:e=>setRn(e.target.value),style:{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.22)",borderRadius:7,padding:"7px 11px",color:C.cream,...M,fontSize:".8rem",outline:"none"}},
+              el("option",{value:"正常",style:{background:C.roast}},"✅ 正常"),
+              el("option",{value:"待修",style:{background:C.roast}},"🔧 待修"),
+              el("option",{value:"保養中",style:{background:C.roast}},"🛠️ 保養中")
+            ),
+            el(Btn,{onClick:doReq},"✓ 確認領用")
+          )
+        )
+      ),
 
-      {page==="analytics"&&<>
-        <div style={{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}}>成本分析</div>
-        <div style={{color:C.muted,fontSize:".76rem",marginBottom:22,...M}}>COST ANALYTICS</div>
-        <div className="g4" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:16,marginBottom:20}}>
-          {machNames.map(mn=>{
+      // ── 領用紀錄 ──
+      page==="records" && el(Fragment,null,
+        el("div",{style:{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}},"領用紀錄"),
+        el("div",{style:{color:C.muted,fontSize:".76rem",marginBottom:22,...M}},"USAGE RECORDS"),
+        el(Card,null,
+          el("div",{style:{padding:"11px 16px",display:"flex",gap:8,flexWrap:"wrap",borderBottom:"1px solid rgba(196,122,43,.08)"}},
+            el("select",{value:ff,onChange:e=>setFf(e.target.value),style:{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.2)",borderRadius:7,padding:"7px 11px",color:C.cream,...M,fontSize:".78rem",outline:"none"}},
+              el("option",{value:"",style:{background:C.roast}},"全部機台"),
+              machNames.map(m=>el("option",{key:m,value:m,style:{background:C.roast}},m))
+            ),
+            el("select",{value:fi,onChange:e=>setFi(e.target.value),style:{background:"rgba(255,255,255,.05)",border:"1px solid rgba(196,122,43,.2)",borderRadius:7,padding:"7px 11px",color:C.cream,...M,fontSize:".78rem",outline:"none"}},
+              el("option",{value:"",style:{background:C.roast}},"全部物料"),
+              items.map(i=>el("option",{key:i.id,value:i.name,style:{background:C.roast}},i.name))
+            )
+          ),
+          el("table",{style:{width:"100%",borderCollapse:"collapse"}},
+            el("thead",null,el("tr",null,["時間","機台","物料","數量","操作者","備註"].map(h=>el("th",{key:h,style:thSt},h)))),
+            el("tbody",null,
+              filtR.length===0 && el("tr",null,el("td",{colSpan:6,style:{textAlign:"center",color:C.muted,padding:24,...M,fontSize:".8rem"}},"無資料")),
+              filtR.slice(0,100).map((r,i)=>el("tr",{key:r.fbKey||i},
+                el("td",{style:{...tdSt,fontSize:".72rem",color:C.muted,...M}},r.time),
+                el("td",{style:tdSt},el("span",{style:{background:"rgba(196,122,43,.1)",border:"1px solid rgba(196,122,43,.25)",color:C.caramel,borderRadius:4,padding:"2px 7px",fontSize:".67rem",...M}},r.machine)),
+                el("td",{style:{...tdSt,fontSize:".85rem"}},r.item),
+                el("td",{style:{...tdSt,color:C.gold,...M,fontWeight:700}},r.qty),
+                el("td",{style:{...tdSt,fontSize:".8rem",color:C.muted}},r.user),
+                el("td",{style:{...tdSt,fontSize:".76rem",color:C.muted}},r.note||"—")
+              ))
+            )
+          )
+        )
+      ),
+
+      // ── 後台管理 ──
+      page==="admin" && el(Fragment,null,
+        el("div",{style:{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}},"後台管理"),
+        el("div",{style:{color:C.muted,fontSize:".76rem",marginBottom:22,...M}},"ADMIN PANEL"),
+        el(Card,{title:"🤖 機器管理",hint:"新增/編輯/刪除"},
+          el("div",{style:{padding:"16px 18px"}},
+            el("div",{style:{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}},
+              el("input",{value:newMName,onChange:e=>setNewMName(e.target.value),placeholder:"新機器名稱（如 W6）",style:{flex:1,minWidth:120,...inpSt}}),
+              el(Btn,{onClick:addMachine,style:{padding:"8px 16px"}},"+ 新增")
+            ),
+            el("table",{style:{width:"100%",borderCollapse:"collapse"}},
+              el("thead",null,el("tr",null,["#","名稱","操作"].map(h=>el("th",{key:h,style:thSt},h)))),
+              el("tbody",null,machines.map((m,i)=>el("tr",{key:m.fbKey||i,style:{borderBottom:"1px solid rgba(255,255,255,.04)"}},
+                el("td",{style:{padding:"10px 12px",color:C.muted,...M,fontSize:".72rem"}},"#"+(i+1)),
+                el("td",{style:{padding:"10px 12px"}},
+                  editMIdx===i ? el("input",{value:editMName,onChange:e=>setEditMName(e.target.value),style:{background:"rgba(255,255,255,.08)",border:"1px solid rgba(196,122,43,.4)",borderRadius:6,padding:"5px 9px",color:C.cream,...M,fontSize:".84rem",outline:"none",width:100}})
+                  : el("strong",{style:M},m.name)
+                ),
+                el("td",{style:{padding:"10px 12px"}},el("div",{style:{display:"flex",gap:5}},
+                  editMIdx===i
+                    ? el(Fragment,null, el(SBtn,{c:"green",onClick:()=>saveMachine(m)},"儲存"), el(SBtn,{c:"red",onClick:()=>{setEditMIdx(null);setEditMName("");}},"取消"))
+                    : el(Fragment,null, el(SBtn,{c:"edit",onClick:()=>{setEditMIdx(i);setEditMName(m.name);}},"編輯"), el(SBtn,{c:"red",onClick:()=>delMachine(m)},"刪除"))
+                ))
+              )))
+            )
+          )
+        ),
+        el("div",{className:"g2",style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}},
+          // 物料管理
+          el("div",null,
+            el(Card,{title:"🗃️ 物料管理"},
+              el("div",{style:{padding:"16px 18px",display:"flex",flexDirection:"column",gap:10}},
+                el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}},
+                  el("div",null,el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"物料名稱"),txtInp(iN,setIN,"咖啡豆")),
+                  el("div",null,el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"單位"),txtInp(iU,setIU,"包/顆"))
+                ),
+                el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}},
+                  el("div",null,el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"單價"),numInp(iP,setIP,"0")),
+                  el("div",null,el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"警戒水位"),numInp(iW,setIW,"20"))
+                ),
+                el("div",null,el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"初始庫存"),numInp(iS,setIS,"100")),
+                el(Btn,{onClick:addItem,style:{padding:"9px"}},"+ 新增物料")
+              ),
+              el("table",{style:{width:"100%",borderCollapse:"collapse"}},
+                el("thead",null,el("tr",null,["物料","庫存","單價","操作"].map(h=>el("th",{key:h,style:thSt},h)))),
+                el("tbody",null,items.map(it=>el("tr",{key:it.id,style:{borderBottom:"1px solid rgba(255,255,255,.04)"}},
+                  el("td",{style:{padding:"10px 12px"}},it.name,el("br"),el("span",{style:{fontSize:".66rem",color:C.muted,...M}},`${it.unit}·警戒${it.warn}`)),
+                  el("td",{style:{padding:"10px 12px",...M,color:it.stock<=it.warn?"#e74c3c":C.gold}},it.stock.toLocaleString()),
+                  el("td",{style:{padding:"10px 12px",...M,color:C.muted}},"$"+it.price),
+                  el("td",{style:{padding:"10px 12px"}},el("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},
+                    el(SBtn,{c:"edit",onClick:()=>editItem(it)},"編輯"),
+                    el(SBtn,{c:"green",onClick:()=>rstItem(it)},"補庫"),
+                    el(SBtn,{c:"red",onClick:()=>delItem(it)},"刪除")
+                  ))
+                )))
+              )
+            )
+          ),
+          // 帳號 + 補庫
+          el("div",null,
+            el(Card,{title:"👤 帳號管理"},
+              el("div",{style:{padding:"16px 18px",display:"flex",flexDirection:"column",gap:10}},
+                el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}},
+                  el("div",null,el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"帳號"),txtInp(uN,setUN,"帳號")),
+                  el("div",null,el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"密碼"),el(PwInp,{value:uP,onChange:setUP,placeholder:"至少8字元"}),el(PwStr,{pass:uP}))
+                ),
+                el("div",null,el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"權限"),
+                  el("select",{value:uR,onChange:e=>setUR(e.target.value),style:selSt},
+                    el("option",{value:"User",style:{background:C.roast}},"User（現場人員）"),
+                    me?.role==="Super" && el("option",{value:"Admin",style:{background:C.roast}},"Admin（管理者）"),
+                    me?.role==="Super" && el("option",{value:"Super",style:{background:C.roast}},"Super（最高）")
+                  )
+                ),
+                el(Btn,{onClick:addUser,style:{padding:"9px"}},"+ 新增帳號")
+              ),
+              el("table",{style:{width:"100%",borderCollapse:"collapse"}},
+                el("thead",null,el("tr",null,["帳號","權限","操作"].map(h=>el("th",{key:h,style:thSt},h)))),
+                el("tbody",null,users.map(u=>el("tr",{key:u.id,style:{borderBottom:"1px solid rgba(255,255,255,.04)"}},
+                  el("td",{style:{padding:"10px 12px",...M,fontSize:".82rem"}},u.name, u.id===me?.id && el("span",{style:{fontSize:".62rem",color:C.muted,marginLeft:4}},"(我)")),
+                  el("td",{style:{padding:"10px 12px"}},el(Tag,{label:u.role,type:u.role==="Super"?"danger":u.role==="Admin"?"warn":"safe"})),
+                  el("td",{style:{padding:"10px 12px"}},el("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},
+                    canMgr(u) && el(SBtn,{c:"blue",onClick:()=>rstPw(u)},"重設密碼"),
+                    canMgr(u) && u.id!==me?.id && el(SBtn,{c:"red",onClick:()=>delUser(u)},"刪除"),
+                    !canMgr(u) && el("span",{style:{fontSize:".7rem",color:C.muted}},"—")
+                  ))
+                )))
+              )
+            ),
+            el(Card,{title:"🚚 進貨補庫",style:{marginBottom:0}},
+              el("div",{style:{padding:"16px 18px",display:"flex",flexDirection:"column",gap:10}},
+                el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}},
+                  el("div",null,el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"物料"),
+                    el("select",{value:rId,onChange:e=>setRId(e.target.value),style:selSt},
+                      el("option",{value:"",style:{background:C.roast}},"選擇物料"),
+                      items.map(i=>el("option",{key:i.id,value:i.id,style:{background:C.roast}},i.name))
+                    )
+                  ),
+                  el("div",null,el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"進貨數量"),numInp(rQty,setRQty,"50"))
+                ),
+                el(Btn,{onClick:doRestock,color:"green",style:{padding:"9px"}},"+ 確認進貨")
+              )
+            )
+          )
+        )
+      ),
+
+      // ── 成本分析 ──
+      page==="analytics" && el(Fragment,null,
+        el("div",{style:{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}},"成本分析"),
+        el("div",{style:{color:C.muted,fontSize:".76rem",marginBottom:22,...M}},"COST ANALYTICS"),
+        el("div",{className:"g4",style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:16,marginBottom:20}},
+          machNames.map(mn=>{
             const rs=records.filter(r=>r.machine===mn);
             const tot=rs.reduce((a,r)=>{const i=items.find(x=>x.name===r.item);return a+(i?i.price*r.qty:0);},0);
-            return <div key={mn} style={{background:"linear-gradient(145deg,rgba(59,31,14,.7),rgba(26,15,7,.5))",border:"1px solid rgba(196,122,43,.18)",borderRadius:14,padding:18}}>
-              <div style={{...S,fontSize:"1.1rem",color:C.gold,marginBottom:12}}>{mn}</div>
-              {items.map(item=>{const q=rs.filter(r=>r.item===item.name).reduce((a,r)=>a+r.qty,0);return <div key={item.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:".78rem"}}><span style={{color:C.muted,...M,fontSize:".72rem"}}>{item.name}</span><span style={{...M}}>${(q*item.price).toFixed(0)}</span></div>;})}
-              <hr style={{border:"none",borderTop:"1px solid rgba(196,122,43,.1)",margin:"6px 0"}}/>
-              <div style={{display:"flex",justifyContent:"space-between",fontWeight:700,color:C.gold,...M,fontSize:".82rem"}}><span>本月合計</span><span>${tot.toFixed(0)}</span></div>
-            </div>;
-          })}
-        </div>
-      </>}
+            return el("div",{key:mn,style:{background:"linear-gradient(145deg,rgba(59,31,14,.7),rgba(26,15,7,.5))",border:"1px solid rgba(196,122,43,.18)",borderRadius:14,padding:18}},
+              el("div",{style:{...S,fontSize:"1.1rem",color:C.gold,marginBottom:12}},mn),
+              items.map(item=>{const q=rs.filter(r=>r.item===item.name).reduce((a,r)=>a+r.qty,0);return el("div",{key:item.id,style:{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:".78rem"}},el("span",{style:{color:C.muted,...M,fontSize:".72rem"}},item.name),el("span",{style:M},"$"+(q*item.price).toFixed(0)));})  ,
+              el("hr",{style:{border:"none",borderTop:"1px solid rgba(196,122,43,.1)",margin:"6px 0"}}),
+              el("div",{style:{display:"flex",justifyContent:"space-between",fontWeight:700,color:C.gold,...M,fontSize:".82rem"}},el("span",null,"本月合計"),el("span",null,"$"+tot.toFixed(0)))
+            );
+          })
+        )
+      ),
 
-      {page==="profile"&&<>
-        <div style={{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}}>我的帳號</div>
-        <div style={{color:C.muted,fontSize:".76rem",marginBottom:22,...M}}>PROFILE</div>
-        <Card title="💾 資料備份" hint="建議每月備份">
-          <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:12}}>
-            <div style={{background:"rgba(255,255,255,.04)",borderRadius:9,padding:"12px 14px",fontSize:".8rem",color:C.muted,lineHeight:1.9,...M}}>
-              📦 物料：<strong style={{color:C.cream}}>{items.length}項</strong> &nbsp;📋 紀錄：<strong style={{color:C.cream}}>{records.length}筆</strong> &nbsp;👤 帳號：<strong style={{color:C.cream}}>{users.length}個</strong>
-            </div>
-            <Btn onClick={backup} color="green" style={{padding:"11px"}}>📥 立即下載備份檔</Btn>
-          </div>
-        </Card>
-        <div className="g2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
-          <Card title="📋 帳號資訊">
-            <div style={{padding:"18px"}}>
-              {[["帳號",me?.name],["權限",me?.role],["樓層",me?.floor],["登入時間",me?.loginAt?new Date(me.loginAt).toLocaleString("zh-TW"):"—"],["自動登出",`${SESS_MIN}分鐘`]].map(([l,v])=>(
-                <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
-                  <span style={{fontSize:".78rem",color:C.muted,...M}}>{l}</span>
-                  <span style={{fontSize:".84rem",color:C.cream,...M}}>{v}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-          <Card title="🔑 修改密碼">
-            <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:12}}>
-              <div><div style={{fontSize:".68rem",color:C.muted,...M,marginBottom:4}}>目前密碼</div><Inp type="password" value={po} onChange={setPo} placeholder="目前密碼"/></div>
-              <div><div style={{fontSize:".68rem",color:C.muted,...M,marginBottom:4}}>新密碼</div><Inp type="password" value={pn} onChange={setPn} placeholder="至少8字元"/><PwStr pass={pn}/></div>
-              <div>
-                <div style={{fontSize:".68rem",color:C.muted,...M,marginBottom:4}}>確認新密碼</div>
-                <Inp type="password" value={pc} onChange={setPc} placeholder="再輸入一次"/>
-                {pc&&pn!==pc&&<div style={{fontSize:".68rem",color:"#e74c3c",...M,marginTop:3}}>⚠️ 不一致</div>}
-                {pc&&pn===pc&&pc.length>0&&<div style={{fontSize:".68rem",color:"#2ecc71",...M,marginTop:3}}>✓ 一致</div>}
-              </div>
-              <Btn onClick={changePw} color="green" style={{padding:"10px"}}>🔑 確認修改</Btn>
-            </div>
-          </Card>
-        </div>
-      </>}
-    </div>
+      // ── 我的帳號 ──
+      page==="profile" && el(Fragment,null,
+        el("div",{style:{...S,fontSize:"1.7rem",color:C.gold,marginBottom:4}},"我的帳號"),
+        el("div",{style:{color:C.muted,fontSize:".76rem",marginBottom:22,...M}},"PROFILE"),
+        el(Card,{title:"💾 資料備份",hint:"建議每月備份"},
+          el("div",{style:{padding:"18px",display:"flex",flexDirection:"column",gap:12}},
+            el("div",{style:{background:"rgba(255,255,255,.04)",borderRadius:9,padding:"12px 14px",fontSize:".8rem",color:C.muted,lineHeight:1.9,...M}},
+              "📦 物料：",el("strong",{style:{color:C.cream}},items.length+"項"),
+              " 📋 紀錄：",el("strong",{style:{color:C.cream}},records.length+"筆"),
+              " 👤 帳號：",el("strong",{style:{color:C.cream}},users.length+"個")
+            ),
+            el(Btn,{onClick:backup,color:"green",style:{padding:"11px"}},"📥 立即下載備份檔")
+          )
+        ),
+        el("div",{className:"g2",style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}},
+          el(Card,{title:"📋 帳號資訊"},
+            el("div",{style:{padding:"18px"}},
+              [["帳號",me?.name],["權限",me?.role],["樓層",me?.floor],["登入時間",me?.loginAt?new Date(me.loginAt).toLocaleString("zh-TW"):"—"],["自動登出",SESS_MIN+"分鐘"]].map(([l,v])=>
+                el("div",{key:l,style:{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}},
+                  el("span",{style:{fontSize:".78rem",color:C.muted,...M}},l),
+                  el("span",{style:{fontSize:".84rem",color:C.cream,...M}},v)
+                )
+              )
+            )
+          ),
+          el(Card,{title:"🔑 修改密碼"},
+            el("div",{style:{padding:"18px",display:"flex",flexDirection:"column",gap:12}},
+              el("div",null,el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"目前密碼"),el(PwInp,{value:po,onChange:setPo,placeholder:"目前密碼"})),
+              el("div",null,el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"新密碼"),el(PwInp,{value:pn,onChange:setPn,placeholder:"至少8字元"}),el(PwStr,{pass:pn})),
+              el("div",null,
+                el("div",{style:{fontSize:".68rem",color:C.muted,...M,marginBottom:4}},"確認新密碼"),
+                el(PwInp,{value:pc,onChange:setPc,placeholder:"再輸入一次"}),
+                pc&&pn!==pc && el("div",{style:{fontSize:".68rem",color:"#e74c3c",...M,marginTop:3}},"⚠️ 不一致"),
+                pc&&pn===pc&&pc.length>0 && el("div",{style:{fontSize:".68rem",color:"#2ecc71",...M,marginTop:3}},"✓ 一致")
+              ),
+              el(Btn,{onClick:changePw,color:"green",style:{padding:"10px"}},"🔑 確認修改")
+            )
+          )
+        )
+      )
+    ),
 
-    {modal&&<Modal title={modal.title} body={modal.body} okRed={modal.okRed} okLabel={modal.okLabel} onOk={()=>{modal.onOk();setModal(null);}} onClose={()=>setModal(null)}/>}
-    <Toast msg={toast.msg} type={toast.type}/>
-  </>;
+    // Modal & Toast
+    modal && el(Modal,{title:modal.title,body:modal.body,okRed:modal.okRed,okLabel:modal.okLabel,onOk:()=>{modal.onOk();setModal(null);},onClose:()=>setModal(null)}),
+    el(Toast,{msg:toast.msg,type:toast.type})
+  );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
 </script>
 </body>
 </html>
